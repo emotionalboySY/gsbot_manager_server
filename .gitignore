@@ -67,3 +67,4 @@ index_test.js
 # Backup files
 *_backup.js
 *_backup_*.js
+firebase-service-account.json

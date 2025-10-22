@@ -1,0 +1,69 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# Environment variables (CRITICAL - DO NOT UPLOAD)
+.env
+.env.*
+!.env.example
+
+# Database files (SENSITIVE DATA)
+database_export.json
+*_backup.json
+*.sql
+*.sqlite
+*.db
+
+# Logs
+logs/
+*.log
+log-*.log
+error-*.log
+out-*.log
+error_test-*.log
+log_test-*.log
+out_test-*.log
+
+# PM2
+.pm2/
+ecosystem.config.js
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# Build outputs
+dist/
+build/
+.cache/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Test files (optional - 필요시 주석 처리)
+*_test.js
+index_test.js
+
+# Backup files
+*_backup.js
+*_backup_*.js

@@ -12,18 +12,14 @@ const openAPIBaseUrl = "https://open.api.nexon.com/maplestory/v1";
 
 const API_START_DATE = new Date('2023-12-21'); // API 서비스 시작일
 
-router.get('/exp/:chatRoomName/:talkProfileName/:characterName?', async (req, res) => {
+router.get('/exp', async (req, res) => {
     const url = openAPIBaseUrl + "/character/basic";
-    const chatRoomName = req.params.chatRoomName;
-    const talkProfileName = req.params.talkProfileName;
-    let characterName = req.params.characterName || null;
+    let { chatRoomName, talkProfileName, characterName } = req.query;
     let date = new Date();
 
-    if (characterName == null) {
-        let mainCharacter = await mc.getMainCharacter(chatRoomName, talkProfileName);
-        if (mainCharacter) {
-            characterName = mainCharacter;
-        } else {
+    if (!characterName) {
+        characterName = await mc.getMainCharacter(chatRoomName, talkProfileName);
+        if (!characterName) {
             let message = `${talkProfileName} <<< 이 톡프로필에 저장된 본캐가 없습니다. \"/본캐 [캐릭터명]\"명령어를 통해 본캐 지정을 하거나, 찾고 싶은 캐릭터 이름을 명령어 뒤에 입력해 주세요.`;
             return res.status(200).json(taj.successJSON(false, message));
         }
@@ -117,16 +113,13 @@ router.get('/exp/:chatRoomName/:talkProfileName/:characterName?', async (req, re
 });
 
 // 최적화된 라우터 (전체 기간 지원)
-router.get('/level/:chatRoomName/:talkProfileName/:characterName?', async (req, res) => {
-    const chatRoomName = req.params.chatRoomName;
-    const talkProfileName = req.params.talkProfileName;
-    let characterName = req.params.characterName || null;
+router.get('/level', async (req, res) => {
 
-    if (characterName == null) {
-        let mainCharacter = await mc.getMainCharacter(chatRoomName, talkProfileName);
-        if (mainCharacter) {
-            characterName = mainCharacter;
-        } else {
+    let { chatRoomName, talkProfileName, characterName } = req.query;
+
+    if (!characterName) {
+        characterName = await mc.getMainCharacter(chatRoomName, talkProfileName);
+        if (!characterName) {
             let message = `${talkProfileName} <<< 이 프로필에 저장된 본캐가 없습니다. \"/본캐 [캐릭터명]\"명령어를 통해 본캐 지정을 하거나, 찾고 싶은 캐릭터 이름을 명령어 뒤에 입력해 주세요.`;
             return res.status(200).json(taj.successJSON(false, message));
         }

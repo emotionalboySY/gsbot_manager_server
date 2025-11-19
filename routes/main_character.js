@@ -25,12 +25,10 @@ router.get('/get/:chatRoomName/:talkProfileName', async (req, res) => {
     return res.status(200).json(successJSON(success, message));
 });
 
-router.post('/set/:chatRoomName/:talkProfileName/:characterName', async (req, res) => {
-    const chatRoomName = req.params.chatRoomName;
-    const talkProfileName = req.params.talkProfileName;
-    const characterName = req.params.characterName;
+router.post('/set', async (req, res) => {
+    const { chatRoomName, talkProfileName, characterName } = req.body;
 
-    console.log(`${getNowDateTime()} - 본캐지정(${talkProfileName} -> ${characterName})`);
+    console.log(`${getNowDateTime()} - 본캐지정(${talkProfileName} > ${characterName})`);
 
     let result = await mc.setMainCharacter(chatRoomName, talkProfileName, characterName);
 
@@ -45,7 +43,7 @@ router.post('/set/:chatRoomName/:talkProfileName/:characterName', async (req, re
     }
 
     return res.status(200).json(successJSON(success, message));
-});
+})
 
 function successJSON(success, result) {
     var json = {

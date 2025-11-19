@@ -17,6 +17,17 @@ router.post('/register', async (req, res) => {
 
         console.log('📱 FCM 토큰 등록 요청:', token.substring(0, 20) + '...');
 
+        if (device_info && device_info.platform) {
+            const deleteResult = await FCMToken.deleteMany({
+                token: { $ne: token },
+                'device_info_platform': device_info.plahform
+            });
+
+            if (deleteResult.deletedCount > 0) {
+                console.log(`🗑️ ${deleteResult.deletedCount}개의 구 토큰 삭제됨`);
+            }
+        }
+
         // upsert 메서드 사용
         const [fcmToken, created] = await FCMToken.upsert({
             token,
@@ -62,6 +73,11 @@ router.post('/test', async (req, res) => {
             }
         );
 
+        if(!result.success && result.error && (result.error.includes('not-registered') || result.error.includes('invalid-registration-token'))) {
+            await FCMToken.deleteOne({ token });
+            console.log('🗑️ 무효한 토큰 삭제됨');
+        }
+
         res.json(result);
     } catch (error) {
         console.error('❌ 알림 전송 실패:', error);
@@ -102,6 +118,14 @@ router.post('/send-all', async (req, res) => {
             body,
             data || {}
         );
+
+        // ✅ 개선: 무효한 토큰이 있으면 DB에서 삭제
+        if (result.invalidTokens && result.invalidTokens.length > 0) {
+            const deleteResult = await FCMToken.deleteMany({
+                token: { $in: result.invalidTokens }
+            });
+            console.log(`🗑️ ${deleteResult.deletedCount}개의 무효한 토큰 DB에서 삭제됨`);
+        }
 
         res.json(result);
     } catch (error) {

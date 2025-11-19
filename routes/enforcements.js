@@ -5,10 +5,10 @@ const router = express.Router();
 const mc = require('../utils/main_character.js');
 const taj = require('../utils/time_and_json.js');
 
-router.get('/superial/:start/:goal/:isStarCatch', (req, res) => {
-    let start = Number(req.params.start);
-    let goal = Number(req.params.goal);
-    let isStarCatch = Number(req.params.isStarCatch);
+router.get('/superial', (req, res) => {
+
+    const { start, goal, isStarCatch } = req.query;
+
     console.log(`${taj.getNowDateTime()} - 스타포스시뮬(슈페리얼, ${start}, ${goal}, ${isStarCatch})`);
 
     let success = false;
@@ -137,13 +137,10 @@ router.get('/superial/:start/:goal/:isStarCatch', (req, res) => {
     });
 });
 
-router.get('/starForce/:level/:start/:goal/:isStarCatch/:event/:unBreak', (req, res) => {
-    let itemLev = Number(req.params.level);
-    let startForce = Number(req.params.start);
-    let goalForce = Number(req.params.goal);
-    let isStarCatch = Number(req.params.isStarCatch);
-    let isEvent = Number(req.params.event);
-    let isBreakShield = Number(req.params.unBreak);
+router.get('/starForce', (req, res) => {
+
+    const { itemLev, startForce, goalForce, isStarCatch, isEvent, isBreakShield } = req.query;
+
     console.log(`${taj.getNowDateTime()} - 스타포스시뮬(${itemLev}, ${startForce}, ${goalForce}, ${isStarCatch}, ${isEvent}, ${isBreakShield})`);
 
     let success = false;

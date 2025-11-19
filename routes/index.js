@@ -10,6 +10,7 @@ const enforcements = require('./enforcements.js');
 const extra = require('./extra.js');
 const intervalMessage = require('./interval_message.js');
 const fcmRouter = require('./fcm.js');
+const probability = require('./probability.js');
 
 router.use("/history", history);
 router.use("/main_character", mainCharacter);
@@ -20,5 +21,6 @@ router.use("/enforcements", enforcements);
 router.use("/extra", extra);
 router.use("/intervalMessage", intervalMessage);
 router.use("/fcm", fcmRouter);
+router.use("/probability", probability);
 
 module.exports = router;

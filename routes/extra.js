@@ -3,7 +3,7 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const router = express.Router();
 const mc = require('../utils/main_character.js');
-const taj = require('../utils/time_and_json.js');
+const json = require('../utils/json.js');
 const time = require('../utils/time.js');
 
 const helpText = {
@@ -168,13 +168,10 @@ router.get('/help', async (req, res) => {
             message += singleMsg;
         });
 
-        res.status(200).json(taj.successJSON(true, message));
+        return res.status(200).json(json.success(true, message));
     } catch (e) {
         console.log(e);
-        res.status(200).json({
-            success: false,
-            result: `서버 오류입니다. 관리자에게 문의하세요\n- 오류: ${e.message}`
-        });
+        return res.status(200).json(json.failure(`서버 오류입니다. 관리자에게 문의하세요\n- 오류: ${e.message}`));
     }
 });
 

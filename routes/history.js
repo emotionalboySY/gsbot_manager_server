@@ -3,7 +3,7 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const router = express.Router();
 const mc = require('../utils/main_character.js');
-const taj = require('../utils/time_and_json.js');
+const json = require('../utils/json.js');
 const iden = require('../services/identification.js');
 const time = require('../utils/time.js');
 
@@ -23,7 +23,7 @@ router.get('/exp', async (req, res) => {
         characterName = await mc.getMainCharacter(chatRoomName, talkProfileName);
         if (!characterName) {
             let message = `${talkProfileName} <<< 이 톡프로필에 저장된 본캐가 없습니다. \"/본캐 [캐릭터명]\"명령어를 통해 본캐 지정을 하거나, 찾고 싶은 캐릭터 이름을 명령어 뒤에 입력해 주세요.`;
-            return res.status(200).json(taj.successJSON(false, message));
+            return res.status(200).json(json.failure(message));
         }
     }
 
@@ -34,7 +34,7 @@ router.get('/exp', async (req, res) => {
     let ocid = await iden.getOcid(characterName);
     if (ocid == null) {
         console.log(`${characterName} doesn't exist in API`);
-        res.status(200).json(taj.noOcidJSON(characterName));
+        res.status(200).json(json.noOcid(characterName));
     } else {
         console.log(`${characterName} exists in API`);
         try {
@@ -105,11 +105,11 @@ router.get('/exp', async (req, res) => {
                 let dateToCalcStr = `\n\n예상 레벨업 날짜: ${dateToCalc.getFullYear()}년 ${String(dateToCalc.getMonth() + 1).padStart(2, '0')}월 ${String(dateToCalc.getDate()).padStart(2, '0')}일`;
                 message += dateToCalcStr;
             }
-            return res.status(200).json(taj.successJSON(true, message));
+            return res.status(200).json(json.success(message));
         } catch (e) {
             console.error(e.response.data.error);
             let message = `name: ${e.response.data.error.name}\nmessage: ${e.response.data.error.message}`;
-            return res.status(200).json(taj.successJSON(false, message));
+            return res.status(200).json(json.failure(message));
         }
     }
 });
@@ -123,7 +123,7 @@ router.get('/level', async (req, res) => {
         characterName = await mc.getMainCharacter(chatRoomName, talkProfileName);
         if (!characterName) {
             let message = `${talkProfileName} <<< 이 프로필에 저장된 본캐가 없습니다. \"/본캐 [캐릭터명]\"명령어를 통해 본캐 지정을 하거나, 찾고 싶은 캐릭터 이름을 명령어 뒤에 입력해 주세요.`;
-            return res.status(200).json(taj.successJSON(false, message));
+            return res.status(200).json(json.failure(message));
         }
     }
 
@@ -138,7 +138,7 @@ router.get('/level', async (req, res) => {
         // ocid 조회
         const ocid = await iden.getOcid(characterName);
         if (ocid == null) {
-            return res.status(200).json(taj.noOcidJSON(characterName));
+            return res.status(200).json(json.noOcid(characterName));
         }
 
         // 1. 기존 데이터 있는지 조회
@@ -162,7 +162,7 @@ router.get('/level', async (req, res) => {
             console.log('DB에 저장 완료');
 
             message = message + combineLevHistories(characterHistory.levHistory.slice(0, 10));
-            return res.status(200).json(taj.successJSON(true, message));
+            return res.status(200).json(json.success(message));
         }
 
         // 3. DB에 있지만 levHistory가 비어 있는 경우 처리
@@ -180,7 +180,7 @@ router.get('/level', async (req, res) => {
             console.log('levHistory 업데이트 완료');
 
             message = message + characterHistory.levHistory.slice(0, 10);
-            return res.status(200).json(taj.successJSON(true, message));
+            return res.status(200).json(json.success(message));
         }
 
         const updatedDate = new Date(characterHistory.updatedDate);
@@ -191,7 +191,7 @@ router.get('/level', async (req, res) => {
         if (daysDiff === 0) {
             console.log('오늘 이미 체크함 - 캐시 반환');
             message = message + combineLevHistories(characterHistory.levHistory.slice(0, 10));
-            return res.status(200).json(taj.successJSON(true, message));
+            return res.status(200).json(json.success(message));
         }
 
         const todayData = await callCharacterAPI(ocid);
@@ -204,7 +204,7 @@ router.get('/level', async (req, res) => {
             await characterHistory.save();
 
             message = message + combineLevHistories(characterHistory.levHistory.slice(0, 10));
-            return res.status(200).json(taj.successJSON(true, message));
+            return res.status(200).json(json.success(message));
         }
 
         console.log(`레벨 변화 감지: ${lastLev} -> ${curLev}`);
@@ -237,13 +237,10 @@ router.get('/level', async (req, res) => {
         console.log('증분 업데이트 완료');
 
         message = message + combineLevHistories(characterHistory.levHistory.slice(0, 10));
-        return res.status(200).json(taj.successJSON(true, message));
+        return res.status(200).json(json.success(message));
     } catch (error) {
         console.error('레벨 히스토리 조회 중 오류:', error);
-        return res.status(200).json({
-            success: false,
-            result: error.message || '레벨 히스토리를 불러오는데 실패했습니다.'
-        });
+        return res.status(200).json(json.failure(error.message || '레벨 히스토리를 불러오는데 실패했습니다.'));
     }
 });
 

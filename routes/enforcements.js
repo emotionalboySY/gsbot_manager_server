@@ -4,6 +4,7 @@ const cheerio = require('cheerio');
 const router = express.Router();
 const mc = require('../utils/main_character.js');
 const time = require('../utils/time.js');
+const json = require('../utils/json.js');
 
 router.get('/superial', (req, res) => {
 
@@ -131,10 +132,7 @@ router.get('/superial', (req, res) => {
         successM = `${successM}실패`;
     }
 
-    res.status(200).json({
-        resultRaw: `${successM}\n\n${content}`,
-        result: encodeURIComponent(`${successM}\n\n${content}`),
-    });
+    return res.status(200).json(json.success(`${successM}\n\n${content}`));
 });
 
 router.get('/starForce', (req, res) => {
@@ -383,10 +381,7 @@ router.get('/starForce', (req, res) => {
         successM = `${successM}실패`;
     }
 
-    res.status(200).json({
-        resultRaw: `${successM}\n\n${content}`,
-        result: encodeURIComponent(`${successM}\n\n${content}`),
-    });
+    return res.status(200).json(json.success(`${successM}\n\n${content}`));
 });
 
 function AddComma(data_value) {

@@ -4,7 +4,7 @@ const cheerio = require('cheerio');
 const router = express.Router();
 const {differenceInDays} = require("date-fns");
 const mc = require('../utils/main_character.js');
-const taj = require('../utils/time_and_json.js');
+const json = require('../utils/json.js');
 const iden = require('../services/identification.js');
 const time = require('../utils/time.js');
 
@@ -25,7 +25,7 @@ router.get("/character", async (req, res) => {
     if (ocid == null) {
         console.log(`${characterName} doesn't exist`);
 
-        res.status(200).json(taj.noOcidJSON(characterName));
+        res.status(200).json(json.noOcid(characterName));
     } else {
         console.log(`${characterName} exist`);
         let message = `[${characterName}의 랭킹 정보]\n\n`;
@@ -179,7 +179,7 @@ router.get("/character", async (req, res) => {
                 message += `\n\n업적 랭킹: ${AddComma(ranking_trophy)}위`;
             }
 
-            return res.status(200).json(taj.successJSON(true, message));
+            return res.status(200).json(json.success(message));
         } catch (e) {
             if (e.response) {
                 console.error("error occurred with response");
@@ -211,10 +211,10 @@ router.get('/guild/:worldName/:guildName', async (req, res) => {
     let oguild_id = await iden.getOGuildId(worldName, guildName);
     if(oguild_id == 0) {
         console.log(`${worldName}은 존재하지 않는 월드 이름임`);
-        return res.status(200).json(taj.noWorldNameJSON(worldName));
+        return res.status(200).json(json.noWorldName(worldName));
     } else if (oguild_id == 1) {
         console.log(`${guildName} 길드에 대한 id 가져오기 실패`);
-        return res.status(200).json(taj.noOGuildIdJSON(guildName));
+        return res.status(200).json(json.noOGuildId(guildName));
     } else {
         console.log(`${worldName}월드에서 ${guildName} 길드 id 조회됨`);
         try {
@@ -279,11 +279,11 @@ router.get('/guild/:worldName/:guildName', async (req, res) => {
                 message += `\n${ordering++}: ${singleElement.characterName} - Lev.${singleElement.level}(${singleElement.expRate}%)`;
             }
 
-            return res.status(200).json(taj.successJSON(true, message));
+            return res.status(200).json(json.success(message));
         } catch (e) {
             console.error(e.response.data.error);
             let message = `name: ${e.response.data.error.name}\nmessage: ${e.response.data.error.message}`;
-            return res.status(200).json(taj.successJSON(false, message));
+            return res.status(200).json(json.failure(message));
         }
     }
 });

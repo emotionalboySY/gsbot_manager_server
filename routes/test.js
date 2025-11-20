@@ -3,7 +3,9 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const router = express.Router();
 const mc = require('../utils/main_character.js');
-const taj = require('../utils/time_and_json.js');
+const json = require('../utils/json.js');
+const time = require("../utils/time.js");
+const iden = require("../services/identification.js");
 const CharacterHistory = require('../models/character_history.js');
 require('dotenv').config();
 
@@ -17,7 +19,7 @@ function buildAPIUrl(ocid, date = null) {
     let url = `${baseUrl}?ocid=${ocid}`;
 
     if (date) {
-        url += `&date=${taj.getDateStringForAPI(date)}`;
+        url += `&date=${time.getDateStringForAPI(date)}`;
     }
 
     return url;
@@ -63,12 +65,12 @@ async function getLast10LevelUps(ocid) {
         let testDate = new Date(curDate);
         testDate.setDate(testDate.getDate() - jumpDays);
 
-        const test = await callCharacterAPI(ocid, taj.getDateStringForAPI(testDate));
+        const test = await callCharacterAPI(ocid, time.getDateStringForAPI(testDate));
         apiCallCount++;
 
         if (test.data.character_level < curLev) {
-            // console.log(`현재 탐색 중인 날짜(${taj.getDateStringForAPI(testDate)}의 레벨이 현재 레벨 보다 낮음`);
-            // console.log(`start: ${taj.getDateStringForAPI(testDate)}\nend: ${taj.getDateStringForAPI(curDate)}\ncurLev: ${curLev}로 이진탐색 시작`);
+            // console.log(`현재 탐색 중인 날짜(${time.getDateStringForAPI(testDate)}의 레벨이 현재 레벨 보다 낮음`);
+            // console.log(`start: ${time.getDateStringForAPI(testDate)}\nend: ${time.getDateStringForAPI(curDate)}\ncurLev: ${curLev}로 이진탐색 시작`);
             const foundLevelUps = await findAllLevelUpsInRange(
                 testDate,
                 curDate,
@@ -105,7 +107,7 @@ async function findAllLevelUpsInRange(start, end, startLev, endLev, ocid) {
     const result = [];
 
     if (differenceInDays(start, end) <= 1) {
-        const endDateStr = taj.getDateStringForAPI(end);
+        const endDateStr = time.getDateStringForAPI(end);
         result.push({
             date: endDateStr,
             level: endLev
@@ -114,7 +116,7 @@ async function findAllLevelUpsInRange(start, end, startLev, endLev, ocid) {
     }
 
     const midDate = new Date((start.getTime() + end.getTime()) / 2);
-    const midData = await callCharacterAPI(ocid, taj.getDateStringForAPI(midDate));
+    const midData = await callCharacterAPI(ocid, time.getDateStringForAPI(midDate));
 
     if(midData.data.character_level > startLev) {
         const leftResults = await findAllLevelUpsInRange(
@@ -145,11 +147,11 @@ router.get('/level/:chatRoomName/:talkProfileName/:characterName?', async (req, 
             characterName = mainCharacter;
         } else {
             let message = `${talkProfileName} <<< 이 프로필에 저장된 본캐가 없습니다. \"/본캐 [캐릭터명]\"명령어를 통해 본캐 지정을 하거나, 찾고 싶은 캐릭터 이름을 명령어 뒤에 입력해 주세요.`;
-            return res.status(200).json(taj.successJSON(false, message));
+            return res.status(200).json(time.successJSON(false, message));
         }
     }
 
-    console.log(`${taj.getNowDateTime()} - 레벨히스토리(${characterName})`);
+    console.log(`${time.getNowDateTime()} - 레벨히스토리(${characterName})`);
 
     try {
         let levHistory = [];
@@ -158,9 +160,9 @@ router.get('/level/:chatRoomName/:talkProfileName/:characterName?', async (req, 
         today.setHours(0, 0, 0, 0);
 
         // ocid 조회
-        const ocid = await taj.getOcid(characterName);
+        const ocid = await iden.getOcid(characterName);
         if (ocid == null) {
-            return res.status(200).json(taj.noOcidJSON(characterName));
+            return res.status(200).json(json.noOcidJSON(characterName));
         }
 
         // 1. 기존 데이터 있는지 조회
@@ -184,7 +186,7 @@ router.get('/level/:chatRoomName/:talkProfileName/:characterName?', async (req, 
             console.log('DB에 저장 완료');
 
             message = message + combineLevHistories(characterHistory.levHistory.slice(0, 10));
-            return res.status(200).json(taj.successJSON(true, message));
+            return res.status(200).json(json.success(true, message));
         }
 
         // 3. DB에 있지만 levHistory가 비어 있는 경우 처리
@@ -202,7 +204,7 @@ router.get('/level/:chatRoomName/:talkProfileName/:characterName?', async (req, 
             console.log('levHistory 업데이트 완료');
 
             message = message + characterHistory.levHistory.slice(0, 10);
-            return res.status(200).json(taj.successJSON(true, message));
+            return res.status(200).json(json.success(true, message));
         }
 
         const updatedDate = new Date(characterHistory.updatedDate);
@@ -213,7 +215,7 @@ router.get('/level/:chatRoomName/:talkProfileName/:characterName?', async (req, 
         if (daysDiff === 0) {
             console.log('오늘 이미 체크함 - 캐시 반환');
             message = message + characterHistory.levHistory.slice(0, 10);
-            return res.status(200).json(taj.successJSON(true, message));
+            return res.status(200).json(json.success(true, message));
         }
 
         const todayData = await callCharacterAPI(ocid);
@@ -226,7 +228,7 @@ router.get('/level/:chatRoomName/:talkProfileName/:characterName?', async (req, 
             await characterHistory.save();
 
             message = message + combineLevHistories(characterHistory.levHistory.slice(0, 10));
-            return res.status(200).json(taj.successJSON(true, message));
+            return res.status(200).json(json.success(true, message));
         }
 
         console.log(`레벨 변화 감지: ${lastLev} -> ${curLev}`);
@@ -259,7 +261,7 @@ router.get('/level/:chatRoomName/:talkProfileName/:characterName?', async (req, 
         console.log('증분 업데이트 완료');
 
         message = message + combineLevHistories(characterHistory.levHistory.slice(0, 10));
-        return res.status(200).json(taj.successJSON(true, message));
+        return res.status(200).json(json.success(true, message));
     } catch (error) {
         console.error('레벨 히스토리 조회 중 오류:', error);
         return res.status(200).json({
@@ -274,7 +276,7 @@ router.get('/level/test', async (req, res) => {
     let ocid = "";
 
     try {
-        ocid = await taj.getOcid(characterName);
+        ocid = await iden.getOcid(characterName);
     } catch (e) {
         console.error(e);
     }
@@ -283,7 +285,7 @@ router.get('/level/test', async (req, res) => {
         let levelUpHistory = await getLast10LevelUps(ocid);
 
         for(let element of levelUpHistory) {
-            console.log(`${taj.getDateStringForAPI(element.date)} - ${element.level}`);
+            console.log(`${time.getDateStringForAPI(element.date)} - ${element.level}`);
         }
     } catch (e) {
         console.log(e);
@@ -339,7 +341,7 @@ async function loadCharacterHistoryFromAPI(characterName, ocid) { // MongoDB에 
     try {
         let config = {};
         let dayInLoop = today;
-        let dateString = taj.getDateStringForAPI(dayInLoop);
+        let dateString = time.getDateStringForAPI(dayInLoop);
         // console.log(ocid);
         // console.log(`${url}?ocid=${ocid}}`);
         config = {
@@ -361,7 +363,7 @@ async function loadCharacterHistoryFromAPI(characterName, ocid) { // MongoDB에 
             // console.log(`now Date: ${dayInLoop}`);
             // console.log(`start Date: ${startDate}`);
             // console.log(`later than start? ${(dayInLoop.getTime() >= startDate.getTime())}`);
-            let dateString = taj.getDateStringForAPI(dayInLoop);
+            let dateString = time.getDateStringForAPI(dayInLoop);
             config = {
                 method: 'get',
                 url: url + `?ocid=${ocid}&date=${dateString}`,

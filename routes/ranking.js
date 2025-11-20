@@ -5,21 +5,23 @@ const router = express.Router();
 const {differenceInDays} = require("date-fns");
 const mc = require('../utils/main_character.js');
 const taj = require('../utils/time_and_json.js');
+const iden = require('../services/identification.js');
+const time = require('../utils/time.js');
 
 require('dotenv').config();
 
 const openAPIBaseUrl = "https://open.api.nexon.com/maplestory/v1";
 
-router.get("/character/:characterName", async (req, res) => {
+router.get("/character", async (req, res) => {
 
-    const characterName = req.params.characterName;
+    const { characterName } = req.query;
     let date = new Date();
     date.setDate(date.getDate() - 1);
-    let dateString = taj.getDateString(date);
+    let dateString = time.getDateString(date);
 
-    console.log(`${taj.getNowDateTime()} - 랭킹(${characterName})`);
+    console.log(`${time.getNowDateTime()} - 랭킹(${characterName})`);
 
-    let ocid = await taj.getOcid(characterName);
+    let ocid = await iden.getOcid(characterName);
     if (ocid == null) {
         console.log(`${characterName} doesn't exist`);
 
@@ -204,9 +206,9 @@ router.get('/guild/:worldName/:guildName', async (req, res) => {
     const guildName = req.params.guildName;
 
     let date = new Date();
-    console.log(`${taj.getNowDateTime()} - 길드멤버랭킹(${worldName}, ${guildName})`);
+    console.log(`${time.getNowDateTime()} - 길드멤버랭킹(${worldName}, ${guildName})`);
 
-    let oguild_id = await taj.getOGuildId(worldName, guildName);
+    let oguild_id = await iden.getOGuildId(worldName, guildName);
     if(oguild_id == 0) {
         console.log(`${worldName}은 존재하지 않는 월드 이름임`);
         return res.status(200).json(taj.noWorldNameJSON(worldName));
@@ -234,7 +236,7 @@ router.get('/guild/:worldName/:guildName', async (req, res) => {
             let memberListWithData = [];
 
             for(let singleCharacterName of memberList) {
-                let ocid = await taj.getOcid(singleCharacterName);
+                let ocid = await iden.getOcid(singleCharacterName);
                 if(ocid == null) {
                     continue;
                 } else {

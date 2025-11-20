@@ -4,6 +4,7 @@ const cheerio = require('cheerio');
 const router = express.Router();
 const mc = require('../utils/main_character.js');
 const taj = require('../utils/time_and_json.js');
+const time = require('../utils/time.js');
 
 const helpText = {
     "건의": {
@@ -153,7 +154,7 @@ const helpText = {
 };
 
 router.get('/help', async (req, res) => {
-    console.log(`${taj.getNowDateTime()} - 도움말`);
+    console.log(`${time.getNowDateTime()} - 도움말`);
     try {
         let message = `<명령어 사용 방법>\n- "/[명령어]"의 형태로 사용\n- 모든 명령어는 초성만으로도 호출할 수 있습니다.\n- 명령어 뒤 파라미터는 모두 띄어쓰기로 구분`;
         let count = 1;

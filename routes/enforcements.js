@@ -3,13 +3,13 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const router = express.Router();
 const mc = require('../utils/main_character.js');
-const taj = require('../utils/time_and_json.js');
+const time = require('../utils/time.js');
 
 router.get('/superial', (req, res) => {
 
     const { start, goal, isStarCatch } = req.query;
 
-    console.log(`${taj.getNowDateTime()} - 스타포스시뮬(슈페리얼, ${start}, ${goal}, ${isStarCatch})`);
+    console.log(`${time.getNowDateTime()} - 스타포스시뮬(슈페리얼, ${start}, ${goal}, ${isStarCatch})`);
 
     let success = false;
     let successM = '명령어 실행 결과: ';
@@ -141,7 +141,7 @@ router.get('/starForce', (req, res) => {
 
     const { itemLev, startForce, goalForce, isStarCatch, isEvent, isBreakShield } = req.query;
 
-    console.log(`${taj.getNowDateTime()} - 스타포스시뮬(${itemLev}, ${startForce}, ${goalForce}, ${isStarCatch}, ${isEvent}, ${isBreakShield})`);
+    console.log(`${time.getNowDateTime()} - 스타포스시뮬(${itemLev}, ${startForce}, ${goalForce}, ${isStarCatch}, ${isEvent}, ${isBreakShield})`);
 
     let success = false;
     let successM = '명령어 실행 결과: ';

@@ -9,6 +9,9 @@ const mongoose = require("mongoose");
 const http = require('http');
 require('moment-timezone');
 
+const time = require('./utils/time.js');
+const iden = require('./services/identification.js');
+
 var moment = require('moment');
 moment.tz.setDefault("Asia/Seoul");
 
@@ -313,7 +316,7 @@ app.get('/boss/:diff/:name', (req, res) => {
     let success = false;
     let content = '';
     let now = new Date();
-    console.log(`${getNowDateTime()} - 보스(${diff}, ${name})`);
+    console.log(`${time.getNowDateTime()} - 보스(${diff}, ${name})`);
 
     const diffList = ['이지', '노멀', '노말', '하드', '카오스', '익스트림', '익스'];
     if (diffList.includes(diff)) {
@@ -700,7 +703,7 @@ app.get('/boss/:diff/:name', (req, res) => {
 app.get('/symbol1/:start/:goal', async (req, res) => {
     let start = Number(req.params.start);
     let goal = Number(req.params.goal);
-    console.log(`${getNowDateTime()} - 심볼1(${start}, ${goal})`);
+    console.log(`${time.getNowDateTime()} - 심볼1(${start}, ${goal})`);
 
     let result = {};
     let message = '';
@@ -843,7 +846,7 @@ app.get('/symbol2/:symbolType/:curLev/:curAmount/:goalLev', async (req, res) => 
     let curLev = Number(req.params.curLev);
     let curAmount = Number(req.params.curAmount);
     let goalLev = Number(req.params.goalLev);
-    console.log(`${getNowDateTime()} - 심볼2(${symbolType}, ${curLev}, ${curAmount}, ${goalLev})`);
+    console.log(`${time.getNowDateTime()} - 심볼2(${symbolType}, ${curLev}, ${curAmount}, ${goalLev})`);
 
     let result = {};
 
@@ -964,7 +967,7 @@ app.get('/symbol2/:symbolType/:curLev/:curAmount/:goalLev', async (req, res) => 
 });
 
 app.get('/randomChannel', async (req, res) => {
-    console.log(`${getNowDateTime()} - 랜덤채널`);
+    console.log(`${time.getNowDateTime()} - 랜덤채널`);
     let randomChannel = pickRandNum(1, 39);
 
     let randomMessage = [
@@ -995,7 +998,7 @@ app.get('/extreme/:curLev/:iteration', async (req, res) => {
     try {
         const curLev = Number(req.params.curLev);
         const iteration = Number(req.params.iteration);
-        console.log(`${getNowDateTime()} - 익성비(${curLev}, ${iteration})`);
+        console.log(`${time.getNowDateTime()} - 익성비(${curLev}, ${iteration})`);
 
         let result = {};
         let message = `[익스트림 성장의 비약 시뮬레이션 결과]\n시작레벨: ${curLev}\n사용횟수: ${iteration}회\n\n`;
@@ -1284,7 +1287,7 @@ app.get('/seedRing/:mode/:iteration', async (req, res) => {
     try {
         const mode = Number(req.params.mode);
         const iteration = Number(req.params.iteration);
-        console.log(`${getNowDateTime()} - 시드링(${mode}, ${iteration})`);
+        console.log(`${time.getNowDateTime()} - 시드링(${mode}, ${iteration})`);
 
         let result = {};
 
@@ -1562,7 +1565,7 @@ app.get('/seedRing/:mode/:iteration', async (req, res) => {
 });
 
 app.get('/sunday', async (req, res) => {
-    console.log(`${getNowDateTime()} - 썬데이메이플`);
+    console.log(`${time.getNowDateTime()} - 썬데이메이플`);
     try {
         const url = 'https://maplestory.nexon.com/News/Event';
 
@@ -1612,9 +1615,9 @@ app.get('/hyperStat/:characterName/:presetNum', async (req, res) => {
     let date = new Date();
     let dateString = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate() - 1}`;
 
-    console.log(`${getNowDateTime()} - 하이퍼스탯(${characterName}, ${presetNum})`);
+    console.log(`${time.getNowDateTime()} - 하이퍼스탯(${characterName}, ${presetNum})`);
 
-    let ocid = await getOcid(characterName);
+    let ocid = await iden.getOcid(characterName);
     if (ocid == null) {
         console.log(`${characterName} doesn't exist`);
         res.status(200).json(noOcidJSON(characterName));
@@ -1677,11 +1680,11 @@ app.get('/propensity/:characterName', async (req, res) => {
     const characterName = req.params.characterName;
     let date = new Date();
     date.setDate(date.getDate() - 1);
-    let dateString = getDateString(date);
+    let dateString = time.getDateString(date);
 
-    console.log(`${getNowDateTime()} - 성향(${characterName})`);
+    console.log(`${time.getNowDateTime()} - 성향(${characterName})`);
 
-    let ocid = await getOcid(characterName);
+    let ocid = await iden.getOcid(characterName);
     if (ocid == null) {
         console.log(`${characterName} doesn't exist`);
         res.status(200).json(noOcidJSON(characterName));
@@ -1736,11 +1739,11 @@ app.get('/ability/:characterName', async (req, res) => {
     const characterName = req.params.characterName;
     let date = new Date();
     date.setDate(date.getDate() - 1)
-    let dateString = getDateString(date);
+    let dateString = time.getDateString(date);
 
-    console.log(`${getNowDateTime()} - 어빌리티(${characterName})`);
+    console.log(`${time.getNowDateTime()} - 어빌리티(${characterName})`);
 
-    let ocid = await getOcid(characterName);
+    let ocid = await iden.getOcid(characterName);
     if (ocid == null) {
         console.log(`${characterName} doesn't exist`);
         res.status(200).json(noOcidJSON(characterName));
@@ -1796,11 +1799,11 @@ app.get('/popularity/:characterName', async (req, res) => {
     const characterName = req.params.characterName;
     let date = new Date();
     date.setDate(date.getDate() - 1);
-    let dateString = `${getDateString(date)}`;
+    let dateString = `${time.getDateString(date)}`;
 
-    console.log(`${getNowDateTime()} - 인기도(${characterName})`);
+    console.log(`${time.getNowDateTime()} - 인기도(${characterName})`);
 
-    let ocid = await getOcid(characterName);
+    let ocid = await iden.getOcid(characterName);
     if (ocid == null) {
         console.log(`${characterName} doesn't exist`);
         res.status(200).json(noOcidJSON(characterName));
@@ -1844,11 +1847,11 @@ app.get('/fightingPower/:characterName', async (req, res) => {
     const characterName = req.params.characterName;
     let date = new Date();
     date.setDate(date.getDate() - 1);
-    let dateString = getDateString(date);
+    let dateString = time.getDateString(date);
 
-    console.log(`${getNowDateTime()} - 전투력(${characterName})`);
+    console.log(`${time.getNowDateTime()} - 전투력(${characterName})`);
 
-    let ocid = await getOcid(characterName);
+    let ocid = await iden.getOcid(characterName);
     if (ocid == null) {
         console.log(`${characterName} doesn't exist`);
         res.status(200).json(noOcidJSON(characterName));
@@ -1894,11 +1897,11 @@ app.get('/hexaStat/:characterName', async (req, res) => {
     const characterName = req.params.characterName;
     let date = new Date();
     date.setDate(date.getDate() - 1);
-    let dateString = getDateString(date);
+    let dateString = time.getDateString(date);
 
-    console.log(`${getNowDateTime()} - 헥사스탯(${characterName})`);
+    console.log(`${time.getNowDateTime()} - 헥사스탯(${characterName})`);
 
-    let ocid = await getOcid(characterName);
+    let ocid = await iden.getOcid(characterName);
     if (ocid == null) {
         console.log(`${characterName} doesn't exist`);
 
@@ -1999,11 +2002,11 @@ app.get("/union/:characterName", async (req, res) => {
     const characterName = req.params.characterName;
     let date = new Date();
     date.setDate(date.getDate() - 1);
-    let dateString = getDateString(date);
+    let dateString = time.getDateString(date);
 
-    console.log(`${getNowDateTime()} - 유니온(${characterName})`);
+    console.log(`${time.getNowDateTime()} - 유니온(${characterName})`);
 
-    let ocid = await getOcid(characterName);
+    let ocid = await iden.getOcid(characterName);
     if (ocid == null) {
         console.log(`${characterName} doesn't exist`);
 
@@ -2060,11 +2063,11 @@ app.get("/union/:characterName", async (req, res) => {
 //     const characterName = req.params.characterName;
 //     let date = new Date();
 //     date.setDate(date.getDate() - 1);
-//     let dateString = getDateString(date);
+//     let dateString = time.getDateString(date);
 //
-//     console.log(`${getNowDateTime()} - HEXA강화(${characterName})`);
+//     console.log(`${time.getNowDateTime()} - HEXA강화(${characterName})`);
 //
-//     let ocid = await getOcid(characterName);
+//     let ocid = await iden.getOcid(characterName);
 //     if (ocid == null) {
 //         console.log(`${characterName} doesn't exist`);
 //
@@ -2177,11 +2180,11 @@ app.get("/info_six/:characterName", async (req, res) => {
     const characterName = req.params.characterName;
     let date = new Date();
     date.setDate(date.getDate() - 1);
-    let dateString = getDateString(date);
+    let dateString = time.getDateString(date);
 
-    console.log(`${getNowDateTime()} - HEXA강화(${characterName})`);
+    console.log(`${time.getNowDateTime()} - HEXA강화(${characterName})`);
 
-    let ocid = await getOcid(characterName);
+    let ocid = await iden.getOcid(characterName);
     if (ocid == null) {
         console.log(`${characterName} doesn't exist`);
 
@@ -2325,7 +2328,7 @@ app.get("/exp_coupon/:type/:lev/:ratio/:expCoupons", async (req, res) => {
 
     const { type, lev, ratio, expCoupons } = req.params;
     const date = new Date();
-    console.log(`${getNowDateTime()} - exp쿠폰(${type}, ${lev}, ${ratio}, ${expCoupons})`);
+    console.log(`${time.getNowDateTime()} - exp쿠폰(${type}, ${lev}, ${ratio}, ${expCoupons})`);
 
     try {
         let typeIndex = Number(type);
@@ -2432,11 +2435,11 @@ app.get("/info/:characterName", async (req, res) => {
     const characterName = req.params.characterName;
     let date = new Date();
     date.setDate(date.getDate() - 1);
-    let dateString = getDateString(date);
+    let dateString = time.getDateString(date);
 
-    console.log(`${getNowDateTime()} - 캐릭터정보(${characterName})`);
+    console.log(`${time.getNowDateTime()} - 캐릭터정보(${characterName})`);
 
-    let ocid = await getOcid(characterName);
+    let ocid = await iden.getOcid(characterName);
     if (ocid == null) {
         console.log(`${characterName} doesn't exist`);
 
@@ -2497,7 +2500,7 @@ app.get('/test', async (req, res) => {
 
     date.setDate(date.getDate() - 1);
 
-    let ocid = await getOcid(characterName);
+    let ocid = await iden.getOcid(characterName);
     if (ocid == null) {
         console.log(`${characterName} doesn't exist`);
         res.status(200).json(noOcidJSON(characterName));
@@ -2509,7 +2512,7 @@ app.get('/test', async (req, res) => {
             let curLev = -1;
             let dateStringArr = [];
             for (; ;) {
-                dateString = getDateString(date);
+                dateString = time.getDateString(date);
                 let config = {
                     method: 'get',
                     url: url + `?ocid=${ocid}&date=${dateString}`,
@@ -2910,33 +2913,6 @@ function getOptionName(str) {
     return result;
 }
 
-
-async function getOcid(characterName) {
-    let date = new Date();
-    if(date.getHours() == 0) {
-        return null;
-    }
-    else {
-        try {
-            let url = openAPIBaseUrl + `/id?character_name=${encodeURIComponent(characterName)}`;
-
-            const config = {
-                method: 'get',
-                url: url,
-                headers: {
-                    'accept': 'application/json',
-                    'x-nxopen-api-key': process.env.API_KEY
-                },
-            };
-
-            let response = await axios(config);
-            return response.data.ocid;
-        } catch (e) {
-            return null;
-        }
-    }
-}
-
 function noOcidJSON(name) {
     var str = "";
     let date = new Date();
@@ -2959,27 +2935,6 @@ function successJSON(success, result) {
     }
 
     return json;
-}
-
-function getDateString(date) {
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
-
-function getKorDateString(date) {
-    return `${date.getFullYear()}년 ${String(date.getMonth() + 1).padStart(2, '0')} ${String(date.getDate()).padStart(2, '0')}일`;
-}
-
-function getKorDateStringAndTime(dateString, typeNum) {
-    const date = new Date(dateString);
-
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-
-    if(typeNum == 1) return `${year}년 ${month}월 ${day}일 ${hours}시 ${minutes}분`;
-    else return `${year}-${month}-${day} ${hours}:${minutes}`;
 }
 
 function sleep(ms) {
@@ -3027,11 +2982,6 @@ function determineClass(subclass) {
     }
 
     return className;
-}
-
-function getNowDateTime() {
-    let now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
 }
 
 function truncateText(text, maxLength = 13) {

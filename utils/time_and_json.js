@@ -26,54 +26,6 @@ const availableWorldName = [
     "챌린저스4"
 ];
 
-async function getOcid(characterName) {
-    let date = new Date();
-    try {
-        let url = openAPIBaseUrl + `/id?character_name=${encodeURIComponent(characterName)}`;
-
-        const config = {
-            method: 'get',
-            url: url,
-            headers: {
-                'accept': 'application/json',
-                'x-nxopen-api-key': process.env.API_KEY
-            },
-        };
-
-        let response = await axios(config);
-        return response.data.ocid;
-    } catch (e) {
-        console.log(e.message);
-        return null;
-    }
-}
-
-async function getOGuildId(worldName, guildName) {
-    let date = new Date();
-    if (!availableWorldName.includes(worldName)) {
-        return 0;
-    } else {
-        try {
-            let url = openAPIBaseUrl + `/guild/id?guild_name=${encodeURIComponent(guildName)}&world_name=${encodeURIComponent(worldName)}`;
-
-            const config = {
-                method: 'get',
-                url: url,
-                headers: {
-                    'accept': 'application/json',
-                    'x-nxopen-api-key': process.env.API_KEY
-                },
-            };
-
-            let response = await axios(config);
-            return response.data.oguild_id;
-        } catch (e) {
-            console.log(e.message);
-            return 1;
-        }
-    }
-}
-
 function APIUnavailable() {
     let str = "현재 NEXON OpenAPI 서버 점검 및 업데이트 시간으로 로드가 불가능합니다. 오전 01시 이후에 재시도해 주세요.";
     return {
@@ -126,53 +78,13 @@ function successJSON(success, result) {
     return json;
 }
 
-function getDateStringForAPI(date) {
-    let useDate = new Date(date);
-    return `${useDate.getFullYear()}-${String(useDate.getMonth() + 1).padStart(2, '0')}-${String(useDate.getDate()).padStart(2, '0')}`;
-}
-
-function getKorDateString(date) {
-    return `${date.getFullYear()}년 ${String(date.getMonth() + 1).padStart(2, '0')}월 ${String(date.getDate()).padStart(2, '0')}일`;
-}
-
-function getKorDateStringAndTime(dateString, typeNum) {
-    const date = new Date(dateString);
-
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-
-    if (typeNum == 1) return `${year}년 ${month}월 ${day}일 ${hours}시 ${minutes}분`;
-    else return `${year}-${month}-${day} ${hours}:${minutes}`;
-}
-
-function getNowDateTime() {
-    let now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-}
-
-function isSameDate(baseDate, comDate) {
-    if (baseDate.getFullYear() == comDate.getFullYear() && baseDate.getMonth() == comDate.getMonth() && baseDate.getDate() == comDate.getDate()) {
-        return true;
-    } else return false;
-}
-
 function sleep(ms) {
     return new Promise((r) => setTimeout(r, ms));
 }
 
 module.exports = {
-    getOcid,
-    getOGuildId,
     noOcidJSON,
     successJSON,
-    getDateStringForAPI,
-    getKorDateString,
-    getKorDateStringAndTime,
-    getNowDateTime,
-    isSameDate,
     sleep,
     APIUnavailable,
     noOGuildIdJSON,

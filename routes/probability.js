@@ -2,13 +2,13 @@ const express = require('express');
 const axios = require('axios');
 const cheerio = require('cheerio');
 const router = express.Router();
-const taj = require('../utils/time_and_json.js');
+const time = require('../utils/time.js');
 
 router.get('/royal', async (req, res) => {
 
     const { iteration } = req.query;
 
-    console.log(`${taj.getNowDateTime()} - 로얄스타일(${iteration})`);
+    console.log(`${time.getNowDateTime()} - 로얄스타일(${iteration})`);
     let result = {};
 
     // let royal_list = [
@@ -152,7 +152,7 @@ router.get('/wonder', async (req, res) => {
 
     const { iteration } = req.query;
 
-    console.log(`${taj.getNowDateTime()} - 원더베리(${iteration})`);
+    console.log(`${time.getNowDateTime()} - 원더베리(${iteration})`);
     let result = {};
 
     // let wonder_list = [
@@ -266,7 +266,7 @@ router.get('/goldApple', async (req, res) => {
 
     const { iteration } = req.query;
 
-    console.log(`${taj.getNowDateTime()} - 골드애플(${iteration})`);
+    console.log(`${time.getNowDateTime()} - 골드애플(${iteration})`);
     let result = [];
 
     let goldItemsRaw = [];
@@ -360,7 +360,7 @@ router.get('/platinumApple', async (req, res) => {
 
     const { iteration } = req.query;
 
-    console.log(`${taj.getNowDateTime()} - 플래티넘애플(${iteration})`);
+    console.log(`${time.getNowDateTime()} - 플래티넘애플(${iteration})`);
     let result = [];
 
     let platinumItemsRaw = [];
@@ -454,7 +454,7 @@ router.get('/boutique', async (req, res) => {
 
     const { iteration } = req.query;
 
-    console.log(`${taj.getNowDateTime()} - 부티크기프트(${iteration})`);
+    console.log(`${time.getNowDateTime()} - 부티크기프트(${iteration})`);
     let result = [];
 
     let boutiqueItemsRaw = [];

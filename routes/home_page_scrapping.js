@@ -2,10 +2,10 @@ const express = require('express');
 const axios = require('axios');
 const cheerio = require('cheerio');
 const router = express.Router();
-const taj = require('../utils/time_and_json.js');
+const time = require('../utils/time.js');
 
 router.get('/event', async (req, res) => {
-    console.log(`${taj.getNowDateTime()} - 이벤트`);
+    console.log(`${time.getNowDateTime()} - 이벤트`);
     const url = openAPIBaseUrl + "/notice-event";
     let date = new Date();
     date.setDate(date.getDate() - 1);
@@ -54,7 +54,7 @@ router.get('/event', async (req, res) => {
 });
 
 router.get('/cashShop', async (req, res) => {
-    console.log(`${taj.getNowDateTime()} - 캐시샵공지`);
+    console.log(`${time.getNowDateTime()} - 캐시샵공지`);
     const url = openAPIBaseUrl + "/notice-cashshop";
     let date = new Date();
     date.setDate(date.getDate() - 1);
@@ -114,7 +114,7 @@ router.get("/notice", async (req, res) => {
     date.setDate(date.getDate() - 1);
     let dateString = getDateString(date);
 
-    console.log(`${taj.getNowDateTime()} - 공지사항 리스트`);
+    console.log(`${time.getNowDateTime()} - 공지사항 리스트`);
 
     try {
         const config = {
@@ -161,7 +161,7 @@ router.get("/update", async (req, res) => {
     date.setDate(date.getDate() - 1);
     let dateString = getDateString(date);
 
-    console.log(`${taj.getNowDateTime()} - 업데이트 리스트`);
+    console.log(`${time.getNowDateTime()} - 업데이트 리스트`);
 
     try {
         const config = {

@@ -4,6 +4,8 @@ const cheerio = require('cheerio');
 const router = express.Router();
 const mc = require('../utils/main_character.js');
 const taj = require('../utils/time_and_json.js');
+const iden = require('../services/identification.js');
+const time = require('../utils/time.js');
 
 const CharacterHistory = require('../models/character_history.js');
 require('dotenv').config();
@@ -25,11 +27,11 @@ router.get('/exp', async (req, res) => {
         }
     }
 
-    console.log(`${taj.getNowDateTime()} - 경험치히스토리(${characterName})`);
+    console.log(`${time.getNowDateTime()} - 경험치히스토리(${characterName})`);
 
     date.setDate(date.getDate() - 6);
 
-    let ocid = await taj.getOcid(characterName);
+    let ocid = await iden.getOcid(characterName);
     if (ocid == null) {
         console.log(`${characterName} doesn't exist in API`);
         res.status(200).json(taj.noOcidJSON(characterName));
@@ -43,7 +45,7 @@ router.get('/exp', async (req, res) => {
             let curLevLoaded = false;
             message = `[${characterName}의 경험치 히스토리]`;
             for (let i = 0; i < 7; i++) {
-                dateString = taj.getDateStringForAPI(date);
+                dateString = time.getDateStringForAPI(date);
                 let config = {};
                 let today = new Date();
                 if (date.getYear() == today.getYear() && date.getMonth() == today.getMonth() && date.getDay() == today.getDay()) {
@@ -125,7 +127,7 @@ router.get('/level', async (req, res) => {
         }
     }
 
-    console.log(`${taj.getNowDateTime()} - 레벨히스토리(${characterName})`);
+    console.log(`${time.getNowDateTime()} - 레벨히스토리(${characterName})`);
 
     try {
         let levHistory = [];
@@ -134,7 +136,7 @@ router.get('/level', async (req, res) => {
         today.setHours(0, 0, 0, 0);
 
         // ocid 조회
-        const ocid = await taj.getOcid(characterName);
+        const ocid = await iden.getOcid(characterName);
         if (ocid == null) {
             return res.status(200).json(taj.noOcidJSON(characterName));
         }
@@ -301,7 +303,7 @@ function buildAPIUrl(ocid, date = null) {
     let url = `${baseUrl}?ocid=${ocid}`;
 
     if (date) {
-        url += `&date=${taj.getDateStringForAPI(date)}`;
+        url += `&date=${time.getDateStringForAPI(date)}`;
     }
 
     return url;
@@ -347,12 +349,12 @@ async function getLast10LevelUps(ocid) {
         let testDate = new Date(curDate);
         testDate.setDate(testDate.getDate() - jumpDays);
 
-        const test = await callCharacterAPI(ocid, taj.getDateStringForAPI(testDate));
+        const test = await callCharacterAPI(ocid, time.getDateStringForAPI(testDate));
         apiCallCount++;
 
         if (test.data.character_level < curLev) {
-            // console.log(`현재 탐색 중인 날짜(${taj.getDateStringForAPI(testDate)}의 레벨이 현재 레벨 보다 낮음`);
-            // console.log(`start: ${taj.getDateStringForAPI(testDate)}\nend: ${taj.getDateStringForAPI(curDate)}\ncurLev: ${curLev}로 이진탐색 시작`);
+            // console.log(`현재 탐색 중인 날짜(${time.getDateStringForAPI(testDate)}의 레벨이 현재 레벨 보다 낮음`);
+            // console.log(`start: ${time.getDateStringForAPI(testDate)}\nend: ${time.getDateStringForAPI(curDate)}\ncurLev: ${curLev}로 이진탐색 시작`);
             const foundLevelUps = await findAllLevelUpsInRange(
                 testDate,
                 curDate,
@@ -389,7 +391,7 @@ async function findAllLevelUpsInRange(start, end, startLev, endLev, ocid) {
     const result = [];
 
     if (differenceInDays(start, end) <= 1) {
-        const endDateStr = taj.getDateStringForAPI(end);
+        const endDateStr = time.getDateStringForAPI(end);
         result.push({
             date: endDateStr,
             level: endLev
@@ -398,7 +400,7 @@ async function findAllLevelUpsInRange(start, end, startLev, endLev, ocid) {
     }
 
     const midDate = new Date((start.getTime() + end.getTime()) / 2);
-    const midData = await callCharacterAPI(ocid, taj.getDateStringForAPI(midDate));
+    const midData = await callCharacterAPI(ocid, time.getDateStringForAPI(midDate));
 
     if(midData.data.character_level > startLev) {
         const leftResults = await findAllLevelUpsInRange(

@@ -11,6 +11,7 @@ require('moment-timezone');
 
 const time = require('./utils/time.js');
 const iden = require('./services/identification.js');
+const Boss = require('./models/boss');
 
 var moment = require('moment');
 moment.tz.setDefault("Asia/Seoul");
@@ -315,378 +316,52 @@ const hexaStatSubMultiplier = {
 };
 
 
-app.get('/boss/:diff/:name', (req, res) => {
+app.get('/boss/:diff/:name', async (req, res) => {
     let {diff, name} = req.params;
     let success = false;
     let content = '';
-    let now = new Date();
     console.log(`${time.getNowDateTime()} - 보스(${diff}, ${name})`);
 
     const diffList = ['이지', '노멀', '노말', '하드', '카오스', '익스트림', '익스'];
+    // 사용자 입력 → 시도할 DB 키 후보 (앞에서부터 매칭 시도)
+    const diffCandidates = {
+        '노멀': ['노말'], '노말': ['노말'],
+        '카오스': ['카오스', '하드'], '하드': ['하드', '카오스'],
+        '익스': ['익스트림'], '익스트림': ['익스트림'],
+        '이지': ['이지']
+    };
+
     if (diffList.includes(diff)) {
-        success = true;
-        switch (name) {
-            case '가디언엔젤슬라임':
-            case '가엔슬':
-                switch (diff) {
-                    case '노말':
-                    case '노멀':
-                        content =
-                            '<가디언 엔젤 슬라임(노멀) 정보>\n\n입장 가능 레벨: 215\n\n- 단일 페이즈\n몬스터 레벨: 220\n체력: 5조\n방어율: 300%\n\n\n';
-                        content =
-                            content +
-                            '<가디언 엔젤 슬라임(노멀) 주요 보상>\n\n결정석 가격: 47,800,000메소\n\n[여명] 가디언 엔젤 링\n녹옥의 보스 반지 상자(하급)';
-                        break;
-                    case '하드':
-                    case '카오스':
-                        content =
-                            '<가디언 엔젤 슬라임(카오스) 정보>\n\n입장 가능 레벨: 215\n\n- 단일 페이즈\n몬스터 레벨: 250\n체력: 90조\n방어율: 300%\n\n\n';
-                        content =
-                            content +
-                            '<가디언 엔젤 슬라임(카오스) 주요 보상>\n\n결정석 가격: 161,000,000메소\n\n솔 에르다의 기운: 70\n[여명] 가디언 엔젤 링\n흑옥의 보스 반지 상자(상급)';
-                        break;
-                }
-                break;
+        const candidates = diffCandidates[diff] || [diff];
+        try {
+            const boss = await Boss.findOne({
+                $or: [{ name: name }, { aliases: name }]
+            });
 
-            case '스우':
-                switch (diff) {
-                    case '노말':
-                    case '노멀':
-                        content =
-                            '<스우(노멀) 정보>\n\n입장 가능 레벨: 190\n\n- 공통\n몬스터 레벨: 210\n방어율: 300%\n\n- 페이즈 1\n체력: 4,700억\n\n- 페이즈 2\n체력: 4,700억\n\n- 페이즈 3\n체력: 6,300억\n\n\n';
-                        content =
-                            content +
-                            '<스우(노멀) 주요 보상>\n\n결정석 가격: 31,400,000메소\n\n특수형 에너지 코어(S급): 1~3개\n녹옥의 보스 반지 상자 (하급)';
-                        break;
-                    case '하드':
-                    case '카오스':
-                        content =
-                            '<스우(하드) 정보>\n\n입장 가능 레벨: 190\n\n- 공통\n몬스터 레벨: 210\n방어율: 300%\n\n- 페이즈 1\n체력: 10조\n\n- 페이즈 2\n체력: 10조\n\n- 페이즈 3\n체력: 13.5조\n\n\n';
-                        content =
-                            content +
-                            '<스우(하드) 주요 보상>\n\n결정석 가격: 119,000,000메소\n\n특수형 에너지 코어(S급): 2~4개\n스우로이드\n솔 에르다의 기운: 50\n\n[앱솔] 앱솔랩스 장비 상자\n[칠흑] 루즈 컨트롤 머신 마크\n[칠흑] 손상된 블랙 하트\n홍옥의 보스 반지 상자 (중급)';
-                        break;
-                    case '익스':
-                    case '익스트림':
-                        content =
-                            '<스우(익스트림) 정보>\n\n입장 가능 레벨: 190\n\n- 공통\n몬스터 레벨: 285\n방어율: 380%\n\n- 페이즈 1\n체력: 545조\n- 방어막: 2.7조\n\n- 페이즈 2\n체력: 545조\n\n- 페이즈 3\n체력: 720조\n\n\n';
-                        content =
-                            content +
-                            '<스우(익스트림) 주요 보상>\n\n결정석 가격: 392,000,000메소\n\n섬멸병기 스우로이드\n솔 에르다의 기운: 280\n\n[칠흑] 컴플리트 언더컨트롤\n[칠흑] 루즈 컨트롤 머신 마크\n[칠흑] 손상된 블랙 하트\n백옥의 보스 반지 상자 (최상급)';
-                        break;
+            if (boss) {
+                // 후보 키를 순서대로 시도하여 매칭되는 난이도를 찾는다
+                let diffData = null;
+                let matchedDiff = null;
+                for (const candidate of candidates) {
+                    diffData = boss.difficulties.get(candidate);
+                    if (diffData) { matchedDiff = candidate; break; }
                 }
-                break;
-
-            case '데미안':
-            case '데먄':
-                switch (diff) {
-                    case '노말':
-                    case '노멀':
-                        content =
-                            '<데미안(노멀) 정보>\n\n입장 가능 레벨: 190\n\n- 공통\n몬스터 레벨: 210\n방어율: 300%\n\n- 페이즈 1\n체력: 8,400억\n\n- 페이즈 2\n체력: 3,600억\n\n\n';
-                        content =
-                            content +
-                            '<데미안(노멀) 주요 보상>\n\n결정석 가격: 32,900,000메소\n\n뒤틀린 낙인의 영혼석: 1~3개\n루인 포스실드\n녹옥의 보스 반지 상자 (하급)';
-                        break;
-                    case '하드':
-                    case '카오스':
-                        content =
-                            '<데미안(하드) 정보>\n\n입장 가능 레벨: 190\n\n- 공통\n몬스터 레벨: 210\n방어율: 300%\n\n- 페이즈 1\n체력: 25.2조\n\n- 페이즈 2\n체력: 10.8조\n\n\n';
-                        content =
-                            content +
-                            '<데미안(하드) 주요 보상>\n\n결정석 가격: 113,000,000메소\n\n뒤틀린 낙인의 영혼석: 2~4개\n데미안로이드\n루인 포스실드\n솔 에르다의 기운: 50\n\n[앱솔] 앱솔랩스 장비 상자\n[칠흑]마력이 깃든 안대\n홍옥의 보스 반지 상자 (중급)';
-                        break;
+                if (diffData) {
+                    success = true;
+                    // 표시용 난이도: DB 키가 '노말'이면 '노멀'로 표시, 나머지는 DB 키 그대로
+                    const displayDiff = matchedDiff === '노말' ? '노멀' : matchedDiff;
+                    content = formatBossContent(boss.name, boss.entryLevel, displayDiff, diffData);
+                } else {
+                    content = `${boss.name}에는 해당 난이도(${diff})가 없습니다.\n사용 가능한 난이도: ${boss.availableDifficulties.join(', ')}`;
                 }
-                break;
-
-            case '루시드':
-            case '루시':
-                switch (diff) {
-                    case '이지':
-                        content =
-                            '<루시드(이지) 정보>\n\n입장 가능 레벨: 220\n\n- 공통\n몬스터 레벨: 230\n아케인 포스: 360\n방어율: 300%\n\n- 페이즈 1\n체력: 6조\n\n- 페이즈 2\n체력: 6조\n\n\n';
-                        content =
-                            content +
-                            '<루시드(이지) 주요 보상>\n\n결정석 가격: 49,000,000메소\n\n녹옥의 보스 반지 상자 (하급)';
-                        break;
-                    case '노말':
-                    case '노멀':
-                        content =
-                            '<루시드(노멀) 정보>\n\n입장 가능 레벨: 220\n\n- 공통\n몬스터 레벨: 230\n아케인 포스: 360\n방어율: 300%\n\n- 페이즈 1\n체력: 12조\n\n- 페이즈 2\n체력: 12조\n\n\n';
-                        content =
-                            content +
-                            '<루시드(노멀) 주요 보상>\n\n결정석 가격: 58,600,000메소\n\n[아케인(재료)] 나비날개 물방울석: 1~2개\n[여명]트와일라이트 마크\n녹옥의 보스 반지 상자 (하급)';
-                        break;
-                    case '하드':
-                    case '카오스':
-                        content =
-                            '<루시드(하드) 정보>\n\n입장 가능 레벨: 220\n\n- 공통\n몬스터 레벨: 230\n아케인 포스: 360\n방어율: 300%\n\n- 페이즈 1\n체력: 50.8조\n\n- 페이즈 2\n체력: 54조\n\n- 페이즈 3\n체력: 12.8조\n\n\n';
-                        content =
-                            content +
-                            '<루시드(하드) 주요 보상>\n\n결정석 가격: 135,000,000메소\n\n루시드로이드\n솔 에르다의 기운: 50\n\n[아케인(재료)] 나비날개 물방울석: 2~3개\n[아케인] 아케인셰이드 장비 상자\n[여명] 트와일라이트 마크\n[칠흑] 몽환의 벨트\n홍옥의 보스 반지 상자 (중급)';
-                        break;
-                }
-                break;
-
-            case '윌':
-                switch (diff) {
-                    case '이지':
-                        content =
-                            '<윌(이지) 정보>\n\n입장 가능 레벨: 235\n\n- 공통\n몬스터 레벨: 235\n아케인 포스: 560\n방어율: 300%\n\n- 페이즈 1\n체력: 5.6조\n\n- 페이즈 2\n체력: 4.2조\n\n- 페이즈 3\n체력: 7조\n\n\n';
-                        content =
-                            content +
-                            '<윌(이지) 주요 보상>\n\n결정석 가격: 53,100,000메소\n\n녹옥의 보스 반지 상자 (하급)';
-                        break;
-                    case '노말':
-                    case '노멀':
-                        content =
-                            '<윌(노멀) 정보>\n\n입장 가능 레벨: 235\n\n- 공통\n몬스터 레벨: 250\n아케인 포스: 760\n방어율: 300%\n\n- 페이즈 1\n체력: 8.4조\n\n- 페이즈 2\n체력: 6.3조\n\n- 페이즈 3\n체력: 10.5조\n\n\n';
-                        content =
-                            content +
-                            '<윌(노멀) 주요 보상>\n\n결정석 가격: 67,600,000메소\n\n[아케인(재료)] 코브웹 물방울석: 1~2개\n[여명] 트와일라이트 마크\n녹옥의 보스 반지 상자 (하급)';
-                        break;
-                    case '하드':
-                    case '카오스':
-                        content =
-                            '<윌(하드) 정보>\n\n입장 가능 레벨: 235\n\n- 공통\n몬스터 레벨: 250\n아케인 포스: 760\n방어율: 300%\n\n- 페이즈 1\n체력: 42조\n\n- 페이즈 2\n체력: 31.5조\n\n- 페이즈 3\n체력: 52.5조\n\n\n';
-                        content =
-                            content +
-                            '<윌(하드) 주요 보상>\n\n결정석 가격: 165,000,000메소\n\n거울 세계의 코어 젬스톤: 1개\n솔 에르다의 기운: 50\n\n[아케인(재료)] 코브웹 물방울석: 2~3개\n[아케인] 아케인셰이드 장비 상자\n[여명] 트와일라이트 마크\n[칠흑] 저주받은 마도서 교환권\n홍옥의 보스 반지 상자 (중급)';
-                        break;
-                }
-                break;
-
-            case '더스크':
-                switch (diff) {
-                    case '노말':
-                    case '노멀':
-                        content =
-                            '<거대 괴수 더스크(노멀) 정보>\n\n입장 가능 레벨: 245\n\n- 단일 페이즈\n몬스터 레벨: 255\n아케인 포스: 730\n방어율: 300%\n체력: 25.5조\n\n\n';
-                        content =
-                            content +
-                            '<거대 괴수 더스크(노멀) 주요 보상>\n\n결정석 가격: 72,400,000메소\n\n염원의 불꽃: 14개\n\n[여명] 에스텔라 이어링\n녹옥의 보스 반지 상자 (하급)';
-                        break;
-                    case '하드':
-                    case '카오스':
-                        content =
-                            '<거대 괴수 더스크(카오스) 정보>\n\n입장 가능 레벨: 245\n\n- 단일 페이즈\n몬스터 레벨: 255\n아케인 포스: 730\n방어율: 300%\n체력: 127.5조\n\n\n';
-                        content =
-                            content +
-                            '<거대 괴수 더스크(카오스) 주요 보상>\n\n결정석 가격: 150,000,000메소\n\n염원의 불꽃: 14개\n솔 에르다의 기운: 100\n\n[아케인] 아케인셰이드 장비 상자\n[여명] 에스텔라 이어링\n[칠흑] 거대한 공포\n흑옥의 보스 반지 상자 (상급)';
-                        break;
-                }
-                break;
-
-            case '듄켈':
-                switch (diff) {
-                    case '노말':
-                    case '노멀':
-                        content =
-                            '<친위대장 듄켈(노멀) 정보>\n\n입장 가능 레벨: 255\n\n- 단일 페이즈\n몬스터 레벨: 265\n아케인 포스: 850\n방어율: 300%\n체력: 26조\n\n\n';
-                        content =
-                            content +
-                            '<친위대장 듄켈(노멀) 주요 보상>\n\n결정석 가격: 78,100,000메소\n\n염원의 불꽃: 16개\n\n[여명] 에스텔라 이어링\n녹옥의 보스 반지 상자 (하급)';
-                        break;
-                    case '하드':
-                    case '카오스':
-                        content =
-                            '<친위대장 듄켈(하드) 정보>\n\n입장 가능 레벨: 255\n\n- 단일 페이즈\n몬스터 레벨: 265\n아케인 포스: 850\n방어율: 300%\n체력: 157.5조\n\n\n';
-                        content =
-                            content +
-                            '<친위대장 듄켈(하드) 주요 보상>\n\n결정석 가격: 177,000,000메소\n\n염원의 불꽃: 14개\n솔 에르다의 기운: 120\n\n[아케인] 아케인셰이드 장비 상자\n[여명]에스텔라 이어링\n[칠흑]커맨더 포스 이어링\n흑옥의 보스 반지 상자 (상급)';
-                        break;
-                }
-                break;
-
-            case '진힐라':
-            case '지닐라':
-                switch (diff) {
-                    case '노말':
-                    case '노멀':
-                        content =
-                            '<진 힐라(노멀) 정보>\n\n입장 가능 레벨: 250\n\n- 공통\n몬스터 레벨: 250\n아케인 포스: 820\n방어율: 300%\n\n- 페이즈 1\n체력: 22조\n\n- 페이즈 2\n체력: 22조\n\n- 페이즈 3\n체력: 22조\n\n- 페이즈 4\n체력: 22조\n\n\n';
-                        content =
-                            content +
-                            '<진 힐라(노멀) 주요 보상>\n\n결정석 가격: 153,000,000메소\n\n솔 에르다의 기운: 70\n\n[아케인] 아케인셰이드 장비 상자\n[여명] 데이브레이크 펜던트\n홍옥의 보스 반지 상자 (중급)';
-                        break;
-                    case '하드':
-                    case '카오스':
-                        content =
-                            '<진 힐라(하드) 정보>\n\n입장 가능 레벨: 250\n\n- 공통\n몬스터 레벨: 250\n아케인 포스: 900\n방어율: 300%\n\n- 페이즈 1\n체력: 44조\n\n- 페이즈 2\n체력: 44조\n\n- 페이즈 3\n체력: 44조\n\n- 페이즈 4\n체력: 44조\n\n\n';
-                        content =
-                            content +
-                            '<진 힐라(하드) 주요 보상>\n\n결정석 가격: 200,000,000메소\n\n어두운 힘의 기운: 3개\n솔 에르다의 기운: 120\n\n[아케인] 아케인셰이드 장비 상자\n[여명] 데이브레이크 펜던트\n[칠흑] 고통의 근원\n흑옥의 보스 반지 상자 (상급)';
-                        break;
-                }
-                break;
-
-            case '선택받은세렌':
-            case '세렌':
-                switch (diff) {
-                    case '노말':
-                    case '노멀':
-                        content =
-                            '<선택받은 세렌(노멀) 정보>\n\n- 입장 가능 레벨: 260\n- 몬스터 레벨: 270\n- 방어율: 380%\n\n[페이즈 별 포스 및 체력]\n- 페이즈 1\n  . 어센틱 포스: 150\n  . 체력: 52.5조\n- 페이즈 2\n  . 어센틱 포스: 200\n  . 체력: 155.4조\n\n';
-                        content = content + formatMesoPrice(295000000) + '[주요 보상]\n- 솔 에르다의 기운: 150\n- 미트라의 코어 젬스톤\n- 흑옥의 보스 반지 상자 (상급)\n- [여명] 데이브레이크 펜던트';
-                        break;
-                    case '하드':
-                    case '카오스':
-                        content =
-                            '<선택받은 세렌(하드) 정보>\n\n- 입장 가능 레벨: 260\n- 몬스터 레벨: 275\n- 방어율: 380%\n\n[페이즈 별 포스 및 체력]\n- 페이즈 1\n  . 어센틱 포스: 150\n  . 체력: 126조\n- 페이즈 2\n  . 어센틱 포스: 200\n  . 체력: 357조\n\n';
-                        content = content + formatMesoPrice(440000000) + '[주요 보상]\n- 솔 에르다의 기운: 220\n- 미트라의 코어 젬스톤\n- 백옥의 보스 반지 상자 (최상급)\n- [여명] 데이브레이크 펜던트\n- [칠흑] 미트라의 분노';
-                        break;
-                    case '익스트림':
-                    case '익스':
-                        content =
-                            '<선택받은 세렌(익스트림) 정보>\n\n- 입장 가능 레벨: 260\n- 방어율: 380%\n\n[페이즈 별 정보]\n- 페이즈 1\n- 몬스터 레벨: 275\n  . 어센틱 포스: 150\n  . 체력: 1,320조\n- 페이즈 2\n- 몬스터 레벨: 280\n  . 어센틱 포스: 200\n  . 체력: 5,160조\n\n';
-                        content = content + formatMesoPrice(2420000000) + '[주요 보상]\n- 솔 에르다의 기운: 560\n- 미트라의 코어 젬스톤\n- 백옥의 보스 반지 상자 (최상급)\n- [여명] 데이브레이크 펜던트\n- [칠흑] 미트라의 분노\n- [익셉셔널] 익셉셔널 해머(얼굴장식)';
-                        break;
-                }
-                break;
-
-            case '검은마법사':
-            case '검마':
-                switch (diff) {
-                    case '하드':
-                    case '카오스':
-                        content =
-                            '<검은 마법사(하드) 정보>\n\n- 입장 가능 레벨: 255\n\n아케인 포스: 1320\n방어율: 300%\n\n[페이즈 별 정보]\n- 페이즈 1\n  . 체력: 63조\n  . 방어막: 7,500억\n  . 몬스터 레벨: 265\n- 페이즈 2\n  . 체력: 115.5조\n  . 방어막: 2.2조\n  . 몬스터 레벨: 275\n- 페이즈 3\n  . 체력: 157.5조\n  . 방어막: 3.5조\n  . 몬스터 레벨: 275\n- 페이즈 4\n  . 체력: 136.5조\n  . 방어막: 3조\n  . 몬스터 레벨: 275\n\n';
-                        content = content + formatMesoPrice(1000000000) + '[주요 보상]\n- 솔 에르다의 기운: 300\n- (해방) 어둠의 흔적: 600\n- 백옥의 보스 반지 상자 (최상급)\n- [칠흑] 창세의 뱃지';
-                        break;
-                    case '익스트림':
-                    case '익스':
-                        content =
-                            '<검은 마법사(익스트림) 정보>\n\n- 입장 가능 레벨: 255\n아케인 포스: 1320\n방어율: 300%\n\n[페이즈 별 정보]\n- 페이즈 1\n  . 몬스터 레벨: 275\n  . 체력: 1,180조\n  . 방어막: 42조\n- 페이즈 2\n  . 몬스터 레벨: 280\n  . 체력: 1,191조\n  . 방어막: 42조\n- 페이즈 3\n  . 몬스터 레벨: 280\n  . 체력: 1,285조\n  . 방어막: 60조\n- 페이즈 4\n  . 몬스터 레벨: 280\n  . 체력: 1,155조\n  . 방어막: 52조\n\n';
-                        content = content + formatMesoPrice(9200000000) + '[주요 보상]\n- 솔 에르다의 기운: 600\n- (해방) 어둠의 흔적: 600\n- 백옥의 보스 반지 상자 (최상급)\n- [칠흑] 창세의 뱃지\n- [익셉셔널] 익셉셔널 해머(벨트)';
-                        break;
-                }
-                break;
-
-            case '칼로스':
-                switch (diff) {
-                    case '이지':
-                        content =
-                            '<감시자 칼로스(이지) 정보>\n\n- 입장 가능 레벨: 265\n- 몬스터 레벨: 270\n- 어센틱 포스: 200\n- 방어율: 330%\n\n[페이즈 별 체력과 방어율]\n- 페이즈 1\n  . 체력: 94조 5,000억\n  . 방어율: 330%\n- 페이즈 2\n  . 체력: 262조 5,000억\n  . 방어율: 380%\n\n';
-                        content = content + formatMesoPrice(345000000) + '[주요 보상]\n- 솔 에르다의 기운: 200\n- 백옥의 보스 반지 상자 (최상급)';
-                        break;
-                    case '노말':
-                    case '노멀':
-                        content =
-                            '<감시자 칼로스(노멀) 정보>\n\n- 입장 가능 레벨: 265\n- 어센틱 포스: 200\n\n[페이즈 별 정보]\n- 페이즈 1\n  . 체력: 336조\n  . 방어율: 330%\n  . 몬스터 레벨: 275\n- 페이즈 2\n  . 체력: 720조\n  . 방어율: 380%\n  . 몬스터 레벨: 280\n\n';
-                        content = content + formatMesoPrice(510000000) + '[주요 보상]\n- 솔 에르다의 기운: 250\n- 니키로이드\n- 백옥의 보스 반지 상자 (최상급)\n- 생명의 연마석\n- [에테르넬] 남겨진 칼로스의 의지 조각(공통): 3개';
-                        break;
-                    case '하드':
-                    case '카오스':
-                        content =
-                            '<감시자 칼로스(카오스) 정보>\n\n- 입장 가능 레벨: 265\n- 몬스터 레벨: 285\n- 어센틱 포스: 330\n- 방어율: 380%\n\n[페이즈 별 체력]\n- 페이즈 1: 1,066조\n- 페이즈 2: 4,016조\n\n';
-                        content = content + formatMesoPrice(1120000000) + '[주요 보상]\n- 솔 에르다의 기운: 400\n- 니키로이드\n- 생명의 보스 반지 상자\n- 생명의 연마석\n- [에테르넬] 남겨진 칼로스의 의지(공통): 5개\n- [에테르넬] 의지의 에테르넬 방어구 상자';
-                        break;
-                    case '익스트림':
-                    case '익스':
-                        content =
-                            '<감시자 칼로스(익스트림) 정보>\n\n- 입장 가능 레벨: 265\n- 몬스터 레벨: 285\n- 어센틱 포스: 440\n- 방어율: 380%\n\n[페이즈 별 체력]\n- 페이즈 1: 5,970조\n- 페이즈 2: 1경 5,498조\n\n';
-                        content = content + formatMesoPrice(2700000000) + '[주요 보상]\n- 솔 에르다의 기운: 700\n- 니키로이드\n- 생명의 보스 반지 상자\n- 생명의 연마석\n- [에테르넬] 남겨진 칼로스의 의지(공통): 14개\n- [에테르넬] 의지의 에테르넬 방어구 상자\n- [익셉셔널] 익셉셔널 해머(눈장식)';
-                        break;
-                }
-                break;
-
-            case '카링':
-                switch (diff) {
-                    case '이지':
-                        content =
-                            '<카링(이지) 정보>\n\n- 입장 가능 레벨: 275\n- 몬스터 레벨: 275\n- 어센틱 포스: 230\n- 방어율: 380%\n\n[페이즈 별 체력]\n- 페이즈 1\n  . 궁기, 도올, 혼돈: 각 96조\n- 페이즈 2\n  . 카링: 105조\n- 페이즈 3\n  . 궁기, 도올, 혼돈: 각 126조\n  . 카링: 150조\n\n';
-                        content = content + formatMesoPrice(381000000) + '[주요 보상]\n- 솔 에르다의 기운: 200\n- 백옥의 보스 반지 상자 (최상급)\n- [에테르넬] 뒤엉킨 흉수의 고리 조각(공통): 1개';
-                        break;
-                    case '노말':
-                    case '노멀':
-                        content =
-                            '<카링(노멀) 정보>\n\n- 입장 가능 레벨: 275\n- 몬스터 레벨: 285\n- 어센틱 포스: 330\n- 방어율: 380%\n\n[페이즈 별 체력]\n- 페이즈 1\n  . 궁기, 도올, 혼돈: 각 400조\n- 페이즈 2\n  . 카링: 468조\n- 페이즈 3\n  . 궁기, 도올, 혼돈: 각 512조\n  . 카링: 722조\n\n';
-                        content = content + formatMesoPrice(595000000) + '[주요 보상]\n- 솔 에르다의 기운: 300\n- 카링로이드\n- 백옥의 보스 반지 상자 (최상급)\n- 생명의 연마석\n- [에테르넬] 뒤엉킨 흉수의 고리(공통): 5개\n- [칠흑] 혼돈의 칠흑 장신구 상자';
-                        break;
-                    case '하드':
-                    case '카오스':
-                        content =
-                            '<카링(하드) 정보>\n\n- 입장 가능 레벨: 275\n- 몬스터 레벨: 285\n- 어센틱 포스: 350\n- 방어율: 380%\n\n[페이즈 별 체력]\n- 페이즈 1\n  . 궁기, 도올, 혼돈: 각 920조\n- 페이즈 2\n  . 카링: 1,404조\n- 페이즈 3\n  . 궁기, 도올, 혼돈: 각 1,827조\n  . 카링 2,446조\n\n';
-                        content = content + formatMesoPrice(1310000000) + '[주요 보상]\n- 솔 에르다의 기운: 500\n- 카링로이드\n- 생명의 보스 반지 상자\n- 신념의 연마석\n- [에테르넬] 뒤엉킨 흉수의 고리(공통): 7개\n- [에테르넬] 흉수의 에테르넬 방어구 상자\n- [칠흑] 혼돈의 칠흑 장신구 상자';
-                        break;
-                    case '익스트림':
-                    case '익스':
-                        content =
-                            '<카링(익스트림) 정보>\n\n- 입장 가능 레벨: 275\n- 몬스터 레벨: 285\n- 어센틱 포스: 480\n- 방어율: 380%\n\n[페이즈 별 체력]\n- 페이즈 1\n  . 궁기, 도올, 혼돈: 각 6,063조\n- 페이즈 2\n  . 카링: 6,930조\n- 페이즈 3\n  . 궁기, 도올, 혼돈: 각 6,930조\n  . 카링 8,662조\n\n';
-                        content = content + formatMesoPrice(3150000000) + '[주요 보상]\n- 솔 에르다의 기운: 800\n- 카링로이드\n- 생명의 보스 반지 상자\n- 신념의 연마석\n- [에테르넬] 뒤엉킨 흉수의 고리(공통): 18개\n- [에테르넬] 흉수의 에테르넬 방어구 상자\n- [칠흑] 혼돈의 칠흑 장신구 상자\n- [익셉셔널] 익셉셔널 해머(귀고리)';
-                        break;
-                }
-                break;
-
-            case '림보':
-                switch (diff) {
-                    case '노말':
-                    case '노멀':
-                        content =
-                            '<림보(노멀) 정보>\n\n- 입장 가능 레벨: 285\n- 몬스터 레벨: 285\n- 어센틱 포스: 500\n- 방어율: 정보 없음\n\n[페이즈 별 체력]\n- 페이즈 1\n  . 스펙터 A, 스펙터 B: 합 1,944조\n- 페이즈 2\n  . 스펙터 C, 스펙터 D: 합 972조\n- 페이즈 3\n  . 진리에 도달한 림보 - 흑+백: 합 2,592조\n\n';
-                        content = content + formatMesoPrice(900000000) + '[주요 보상]\n- 솔 에르다의 기운: 400\n- 림보로이드\n- 생명의 보스 반지 상자\n- 신념의 연마석\n- [에테르넬] 왜곡된 욕망의 결정: 1개\n- [칠흑] 혼돈의 칠흑 장신구 상자';
-                        break;
-                    case '하드':
-                    case '카오스':
-                        content =
-                            '<림보(하드) 정보>\n\n- 입장 가능 레벨: 285\n- 몬스터 레벨: 285\n- 어센틱 포스: 500\n- 방어율: 정보 없음\n\n[페이즈 별 체력]\n- 페이즈 1\n  . 스펙터 A, 스펙터 B: 합 3,774조\n- 페이즈 2\n  . 스펙터 C, 스펙터 D: 합 1,887조\n- 페이즈 3\n  . 진리에 도달한 림보 - 흑+백: 합 4,884조\n\n';
-                        content =content + formatMesoPrice(1930000000) + '[주요 보상]\n- 솔 에르다의 기운: 550\n- 림보로이드\n- 생명의 보스 반지 상자\n- 신념의 연마석\n- [에테르넬] 왜곡된 욕망의 결정: 2개\n- [에테르넬] 욕망의 에테르넬 방어구 상자\n- [칠흑] 혼돈의 칠흑 장신구 상자\n- [광휘] 근원의 속삭임';
-                        break;
-                }
-                break;
-
-            case '발드릭스':
-            case '발드':
-                switch (diff) {
-                    case '노말':
-                    case '노멀':
-                        content =
-                            '<발드릭스(노멀) 정보>\n\n- 입장 가능 레벨: 290\n- 몬스터 레벨: 290\n- 어센틱 포스: 700\n- 방어율: 정보 없음\n\n[페이즈 별 체력]\n- 페이즈 1\n  . 본체, 하수인, 사념: 합 2,379조\n- 페이즈 2\n  . 정면, 우측면, 좌측면: 합 2,531조\n- 페이즈 3: 4,145조\n\n';
-                        content = content + formatMesoPrice(1200000000) + '[주요 보상]\n- 솔 에르다의 기운: 450\n- 발드릭스로이드\n- 생명의 보스 반지 상자\n- 신념의 연마석\n- [에테르넬] 영원한 충성의 흔적: 1개\n- [칠흑] 혼돈의 칠흑 장신구 상자';
-                        break;
-                    case '하드':
-                    case '카오스':
-                        content =
-                            '<발드릭스(하드) 정보>\n\n- 입장 가능 레벨: 290\n- 몬스터 레벨: 290\n- 어센틱 포스: 700\n- 방어율: 정보 없음\n\n[페이즈 별 체력]\n- 페이즈 1\n  . 본체, 하수인, 사념: 합 5,344조\n- 페이즈 2\n  . 스펙터 C, 스펙터 D: 합 5,684조\n- 페이즈 3: 합 9,309조\n\n';
-                        content = content + formatMesoPrice(2160000000) + '[주요 보상]\n- 솔 에르다의 기운: 650\n- 발드릭스로이드\n- 생명의 보스 반지 상자\n- 신념의 연마석\n- [에테르넬] 영원한 충성의 흔적: 2개\n- [에테르넬] 맹세의 에테르넬 방어구 상자\n- [칠흑] 혼돈의 칠흑 장신구 상자\n- [광휘]: 죽음의 맹세';
-                        break;
-                }
-                break;
-
-            case '쌀숭이':
-            case '최초의 대적자':
-            case '대적자':
-            case '최초의대적자':
-                switch(diff) {
-                    case '이지':
-                        content = '<최초의 대적자(이지) 정보>\n\n- 입장 가능 레벨: 270\n- 몬스터 레벨: 270\n- 방어율: 380%\n\n[페이즈 별 체력]\n- 페이즈 1: 171조\n- 페이즈 2: 171조\n- 페이즈 3: 228조\n\n';
-                        content = content + formatMesoPrice(361000000) + '[주요 보상]\n- 솔 에르다의 기운: 200\n- 백옥의 보스 반지 상자 (최상급)';
-                        break;
-                    case '노말':
-                    case '노멀':
-                        content = '<최초의 대적자(노멀) 정보>\n\n- 입장 가능 레벨: 270\n- 몬스터 레벨: 285\n- 방어율: 380%\n\n[페이즈 별 체력]\n- 페이즈 1: 495조\n- 페이즈 2: 495조\n- 페이즈 3: 660조\n\n';
-                        content = content + formatMesoPrice(530000000) + '[주요 보상]\n- 솔 에르다의 기운: 280\n- 대적자로이드\n- 백옥의 보스 반지 상자 (최상급)\n- 생명의 연마석\n- [에테르넬] 이어진 고대의 결의 조각: 4개';
-                        break;
-                    case '하드':
-                    case '카오스':
-                        content = '<최초의 대적자(하드) 정보>\n\n- 입장 가능 레벨: 270\n- 몬스터 레벨: 280\n- 방어율: 380%\n\n[페이즈 별 체력]\n- 페이즈 1: 3,135조\n- 페이즈 2: 3,135조\n- 페이즈 3: 4,180조\n\n';
-                        content = content + formatMesoPrice(1260000000) + '[주요 보상]\n- 솔 에르다의 기운: 450\n- 대적자로이드\n- 생명의 보스 반지 상자\n- 생명의 연마석\n- [에테르넬] 이어진 고대의 결의 조각: 6개\n- [에테르넬] 고대의 에테르넬 방어구 상자\n- [광휘] 불멸의 유산';
-                        break;
-                    case '익스트림':
-                    case '익스':
-                        content = '<최초의 대적자(하드) 정보>\n\n- 입장 가능 레벨: 270\n- 몬스터 레벨: 290\n- 방어율: 380%\n\n[페이즈 별 체력]\n- 페이즈 1: 9,655조\n- 페이즈 2: 9,655조\n- 페이즈 3: 1경 2,870조\n\n';
-                        content = content + formatMesoPrice(2920000000) + '[주요 보상]\n- 솔 에르다의 기운: 750\n- 대적자로이드\n- 생명의 보스 반지 상자\n- 생명의 연마석\n- [에테르넬] 이어진 고대의 결의 조각: 16개\n- [에테르넬] 고대의 에테르넬 방어구 상자\n- [광휘] 불멸의 유산\n- [익셉셔널] 익셉셔널 해머(훈장)';
-                        break;
-                }
-                break;
-
-            default:
-                success = false;
+            } else {
                 content =
                     name +
                     '\n보스명을 잘못 입력하셨습니다. 보스 명령어는 아래의 규칙에 따라 작성하셔야 합니다.\n\n<보스 명령어 사용 방법>\n"/보스(ㅄ or ㅂㅅ) [난이도] [보스명]"\n\n[난이도]: 카오스 / 하드 / 노말 / 노멀 / 이지 / 익스트림 / 익스\n[보스명]: 띄어쓰기를 포함하지 않은 보스명(ex. 가디언 엔젤 슬라임 -> 가디언엔젤슬라임 or 가엔슬)';
-
-                break;
+            }
+        } catch (err) {
+            console.error(`보스 조회 오류: ${err.message}`);
+            content = '보스 정보 조회 중 오류가 발생했습니다.';
         }
     } else {
         content =
@@ -3019,6 +2694,126 @@ function cleanItemName(name) {
 
 function parseProbability(percentStr) {
     return parseFloat(percentStr.replace('%', '')) / 100;
+}
+
+// HP 숫자를 한국어 단위로 변환 (경, 조, 억)
+function formatHp(hp) {
+    const gyeong = Math.floor(hp / 10000000000000000); // 경
+    const jo = Math.floor((hp % 10000000000000000) / 1000000000000); // 조
+    const eok = Math.floor((hp % 1000000000000) / 100000000); // 억
+
+    let parts = [];
+    if (gyeong > 0) parts.push(`${gyeong.toLocaleString('ko-KR')}경`);
+    if (jo > 0) parts.push(`${jo.toLocaleString('ko-KR')}조`);
+    if (eok > 0) parts.push(`${eok.toLocaleString('ko-KR')}억`);
+
+    return parts.join(' ') || '0';
+}
+
+// 특수 아이템 카테고리 라벨 매핑
+const specialItemLabels = {
+    yeomyeong: '[여명]',
+    chilheuk: '[칠흑]',
+    absolab: '[앱솔]',
+    arcane: '[아케인]',
+    eternal: '[에테르넬]',
+    gwanghwi: '[광휘]',
+    exceptional: '[익셉셔널]'
+};
+
+// DB 보스 데이터로 출력 텍스트 생성
+function formatBossContent(bossName, entryLevel, displayDiff, diffData) {
+    const phases = diffData.phases;
+    const rewards = diffData.rewards;
+    const hasPhaseSpecificInfo = phases.some(p => p.monsterLevel || p.authenticForce || p.shield);
+    const isSinglePhase = phases.length === 1;
+
+    // === 정보 섹션 ===
+    let info = `<${bossName}(${displayDiff}) 정보>\n\n`;
+    info += `입장 가능 레벨: ${entryLevel}\n\n`;
+
+    if (isSinglePhase) {
+        // 단일 페이즈: 공통 정보 + 체력을 한 블록으로
+        info += `- 단일 페이즈\n`;
+        info += `몬스터 레벨: ${diffData.monsterLevel}\n`;
+        if (diffData.arcaneForce) info += `아케인 포스: ${diffData.arcaneForce}\n`;
+        if (diffData.authenticForce) info += `어센틱 포스: ${diffData.authenticForce}\n`;
+        info += `방어율: ${diffData.defenseRate}%\n`;
+        info += `체력: ${formatHp(phases[0].hp)}\n`;
+        if (phases[0].shield) info += `방어막: ${formatHp(phases[0].shield)}\n`;
+    } else if (hasPhaseSpecificInfo) {
+        // 페이즈별 고유 정보가 있는 경우
+        // 페이즈에 개별 값이 있는 항목은 공통에서 제외
+        const hasPhaseMonsterLevel = phases.some(p => p.monsterLevel);
+        const hasPhaseAuthForce = phases.some(p => p.authenticForce);
+        info += `- 공통\n`;
+        if (!hasPhaseMonsterLevel) info += `몬스터 레벨: ${diffData.monsterLevel}\n`;
+        if (diffData.arcaneForce) info += `아케인 포스: ${diffData.arcaneForce}\n`;
+        if (!hasPhaseAuthForce && diffData.authenticForce) info += `어센틱 포스: ${diffData.authenticForce}\n`;
+        info += `방어율: ${diffData.defenseRate}%\n`;
+        for (const phase of phases) {
+            info += `\n- 페이즈 ${phase.phaseNumber}\n`;
+            if (phase.monsterLevel) info += `  . 몬스터 레벨: ${phase.monsterLevel}\n`;
+            if (phase.authenticForce) info += `  . 어센틱 포스: ${phase.authenticForce}\n`;
+            if (phase.description) {
+                info += `  . ${phase.description}\n`;
+            } else {
+                info += `  . 체력: ${formatHp(phase.hp)}\n`;
+            }
+            if (phase.shield) info += `  . 방어막: ${formatHp(phase.shield)}\n`;
+        }
+    } else {
+        // 다중 페이즈: 공통 정보 + 페이즈별 체력
+        info += `- 공통\n`;
+        info += `몬스터 레벨: ${diffData.monsterLevel}\n`;
+        if (diffData.arcaneForce) info += `아케인 포스: ${diffData.arcaneForce}\n`;
+        if (diffData.authenticForce) info += `어센틱 포스: ${diffData.authenticForce}\n`;
+        info += `방어율: ${diffData.defenseRate}%\n`;
+        for (const phase of phases) {
+            info += `\n- 페이즈 ${phase.phaseNumber}\n`;
+            if (phase.description) {
+                info += `${phase.description}\n`;
+            } else {
+                info += `체력: ${formatHp(phase.hp)}\n`;
+            }
+        }
+    }
+
+    info += `\n\n`;
+
+    // === 보상 섹션 ===
+    let reward = `<${bossName}(${displayDiff}) 주요 보상>\n\n`;
+    reward += `결정석 가격: ${rewards.crystalPrice.toLocaleString('ko-KR')}메소\n`;
+    if (rewards.solErda) reward += `솔 에르다의 기운: ${rewards.solErda}\n`;
+
+    // 일반 아이템
+    if (rewards.items && rewards.items.length > 0) {
+        reward += '\n';
+        for (const item of rewards.items) {
+            reward += `${item}\n`;
+        }
+    }
+
+    // 특수 아이템
+    const specialItems = rewards.specialItems;
+    let hasSpecial = false;
+    if (specialItems) {
+        const specialLines = [];
+        for (const [category, label] of Object.entries(specialItemLabels)) {
+            const itemList = specialItems[category];
+            if (itemList && itemList.length > 0) {
+                for (const item of itemList) {
+                    specialLines.push(`${label} ${item}`);
+                }
+            }
+        }
+        if (specialLines.length > 0) {
+            reward += '\n';
+            reward += specialLines.join('\n');
+        }
+    }
+
+    return info + reward;
 }
 
 function formatMesoPrice(amount) {

@@ -550,9 +550,9 @@ const bossData = [
         defenseRate: 380,
         authenticForce: 230,
         phases: [
-          { phaseNumber: 1, hp: 288000000000000 },
-          { phaseNumber: 2, hp: 105000000000000 },
-          { phaseNumber: 3, hp: 528000000000000 }
+          { phaseNumber: 1, hp: 288000000000000, description: '궁기, 도올, 혼돈: 각 96조' },
+          { phaseNumber: 2, hp: 105000000000000, description: '카링: 105조' },
+          { phaseNumber: 3, hp: 528000000000000, description: '궁기, 도올, 혼돈: 각 126조\n  . 카링: 150조' }
         ],
         rewards: {
           crystalPrice: 381000000,
@@ -568,9 +568,9 @@ const bossData = [
         defenseRate: 380,
         authenticForce: 330,
         phases: [
-          { phaseNumber: 1, hp: 1200000000000000 },
-          { phaseNumber: 2, hp: 468000000000000 },
-          { phaseNumber: 3, hp: 2258000000000000 }
+          { phaseNumber: 1, hp: 1200000000000000, description: '궁기, 도올, 혼돈: 각 400조' },
+          { phaseNumber: 2, hp: 468000000000000, description: '카링: 468조' },
+          { phaseNumber: 3, hp: 2258000000000000, description: '궁기, 도올, 혼돈: 각 512조\n  . 카링: 722조' }
         ],
         rewards: {
           crystalPrice: 595000000,
@@ -587,9 +587,9 @@ const bossData = [
         defenseRate: 380,
         authenticForce: 350,
         phases: [
-          { phaseNumber: 1, hp: 2760000000000000 },
-          { phaseNumber: 2, hp: 1404000000000000 },
-          { phaseNumber: 3, hp: 7927000000000000 }
+          { phaseNumber: 1, hp: 2760000000000000, description: '궁기, 도올, 혼돈: 각 920조' },
+          { phaseNumber: 2, hp: 1404000000000000, description: '카링: 1,404조' },
+          { phaseNumber: 3, hp: 7927000000000000, description: '궁기, 도올, 혼돈: 각 1,827조\n  . 카링: 2,446조' }
         ],
         rewards: {
           crystalPrice: 1310000000,
@@ -606,9 +606,9 @@ const bossData = [
         defenseRate: 380,
         authenticForce: 480,
         phases: [
-          { phaseNumber: 1, hp: 18189000000000000 },
-          { phaseNumber: 2, hp: 6930000000000000 },
-          { phaseNumber: 3, hp: 29452000000000000 }
+          { phaseNumber: 1, hp: 18189000000000000, description: '궁기, 도올, 혼돈: 각 6,063조' },
+          { phaseNumber: 2, hp: 6930000000000000, description: '카링: 6,930조' },
+          { phaseNumber: 3, hp: 29452000000000000, description: '궁기, 도올, 혼돈: 각 6,930조\n  . 카링: 8,662조' }
         ],
         rewards: {
           crystalPrice: 3150000000,
@@ -634,9 +634,9 @@ const bossData = [
         defenseRate: 300,
         authenticForce: 500,
         phases: [
-          { phaseNumber: 1, hp: 1944000000000000 },
-          { phaseNumber: 2, hp: 972000000000000 },
-          { phaseNumber: 3, hp: 2592000000000000 }
+          { phaseNumber: 1, hp: 1944000000000000, description: '스펙터 A, 스펙터 B: 합 1,944조' },
+          { phaseNumber: 2, hp: 972000000000000, description: '스펙터 C, 스펙터 D: 합 972조' },
+          { phaseNumber: 3, hp: 2592000000000000, description: '진리에 도달한 림보 - 흑+백: 합 2,592조' }
         ],
         rewards: {
           crystalPrice: 900000000,
@@ -653,9 +653,9 @@ const bossData = [
         defenseRate: 300,
         authenticForce: 500,
         phases: [
-          { phaseNumber: 1, hp: 3774000000000000 },
-          { phaseNumber: 2, hp: 1887000000000000 },
-          { phaseNumber: 3, hp: 4884000000000000 }
+          { phaseNumber: 1, hp: 3774000000000000, description: '스펙터 A, 스펙터 B: 합 3,774조' },
+          { phaseNumber: 2, hp: 1887000000000000, description: '스펙터 C, 스펙터 D: 합 1,887조' },
+          { phaseNumber: 3, hp: 4884000000000000, description: '진리에 도달한 림보 - 흑+백: 합 4,884조' }
         ],
         rewards: {
           crystalPrice: 1930000000,
@@ -681,8 +681,8 @@ const bossData = [
         defenseRate: 300,
         authenticForce: 700,
         phases: [
-          { phaseNumber: 1, hp: 2379000000000000 },
-          { phaseNumber: 2, hp: 2531000000000000 },
+          { phaseNumber: 1, hp: 2379000000000000, description: '본체, 하수인, 사념: 합 2,379조' },
+          { phaseNumber: 2, hp: 2531000000000000, description: '정면, 우측면, 좌측면: 합 2,531조' },
           { phaseNumber: 3, hp: 4145000000000000 }
         ],
         rewards: {
@@ -700,8 +700,8 @@ const bossData = [
         defenseRate: 300,
         authenticForce: 700,
         phases: [
-          { phaseNumber: 1, hp: 5344000000000000 },
-          { phaseNumber: 2, hp: 5684000000000000 },
+          { phaseNumber: 1, hp: 5344000000000000, description: '본체, 하수인, 사념: 합 5,344조' },
+          { phaseNumber: 2, hp: 5684000000000000, description: '스펙터 C, 스펙터 D: 합 5,684조' },
           { phaseNumber: 3, hp: 9309000000000000 }
         ],
         rewards: {

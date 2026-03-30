@@ -31,10 +31,31 @@ function isSameDate(baseDate, comDate) {
     } else return false;
 }
 
+// Nexon OpenAPI 호출용 날짜 문자열 반환
+// 0시~1시에는 갱신 작업으로 전일 데이터를 불러올 수 없어 2일 전 날짜를 사용
+function getAPIDateString() {
+    let date = new Date();
+    console.log(date);
+    if (date.getHours() === 0) {
+        date.setDate(date.getDate() - 2);
+    } else {
+        date.setDate(date.getDate() - 1);
+    }
+    console.log(date);
+    return getDateStringForAPI(date);
+}
+
+// 현재 Nexon OpenAPI 갱신 시간(0시~1시)인지 확인
+function isAPIUpdateTime() {
+    return new Date().getHours() === 0;
+}
+
 module.exports = {
     getDateStringForAPI,
     getKorDateString,
     getKorDateStringAndTime,
     getNowDateTime,
-    isSameDate
+    isSameDate,
+    getAPIDateString,
+    isAPIUpdateTime
 };

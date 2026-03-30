@@ -4,12 +4,13 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const querystring = require('querystring');
 const cors = require('cors');
-require('dotenv').config();
+require('dotenv').config({ quiet: true });
 const mongoose = require("mongoose");
 const http = require('http');
 require('moment-timezone');
 
 const time = require('./utils/time.js');
+const json = require('./utils/json.js');
 const iden = require('./services/identification.js');
 const Boss = require('./models/boss');
 
@@ -390,7 +391,7 @@ app.get('/symbol1/:start/:goal', async (req, res) => {
     if (start < 1 || start > 19 || goal < 2 || goal > 20 || start >= goal) {
         result = {
             success: false,
-            reault: encodeURIComponent(
+            result: encodeURIComponent(
                 '강화가 가능한 범위를 벗어나는 수치를 입력하였습니다.\n다시 시도해 주세요.'
             ),
         };
@@ -1291,8 +1292,7 @@ app.get('/hyperStat/:characterName/:presetNum', async (req, res) => {
     const url = openAPIBaseUrl + "/character/hyper-stat";
     let characterName = req.params.characterName;
     let presetNum = Number(req.params.presetNum);
-    let date = new Date();
-    let dateString = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate() - 1}`;
+    let dateString = time.getAPIDateString();
 
     console.log(`${time.getNowDateTime()} - 하이퍼스탯(${characterName}, ${presetNum})`);
 
@@ -1357,9 +1357,7 @@ app.get('/hyperStat/:characterName/:presetNum', async (req, res) => {
 app.get('/propensity/:characterName', async (req, res) => {
     const url = openAPIBaseUrl + "/character/propensity";
     const characterName = req.params.characterName;
-    let date = new Date();
-    date.setDate(date.getDate() - 1);
-    let dateString = time.getDateString(date);
+    let dateString = time.getAPIDateString();
 
     console.log(`${time.getNowDateTime()} - 성향(${characterName})`);
 
@@ -1396,19 +1394,8 @@ app.get('/propensity/:characterName', async (req, res) => {
             }
             res.status(200).json(successJSON(success, message));
         } catch (e) {
-            if (e.response) {
-                console.error(e.response);
-                res.status(200).json({
-                    success: false,
-                    result: e.response
-                });
-            } else {
-                console.error(e);
-                res.status(200).json({
-                    success: false,
-                    result: e
-                });
-            }
+            console.error(e.response ? e.response.data : e);
+            res.status(200).json(json.nexonAPIError(e));
         }
     }
 });
@@ -1418,7 +1405,7 @@ app.get('/ability/:characterName', async (req, res) => {
     const characterName = req.params.characterName;
     let date = new Date();
     date.setDate(date.getDate() - 1)
-    let dateString = time.getDateString(date);
+    let dateString = time.getDateStringForAPI(date);
 
     console.log(`${time.getNowDateTime()} - 어빌리티(${characterName})`);
 
@@ -1456,19 +1443,8 @@ app.get('/ability/:characterName', async (req, res) => {
 
             res.status(200).json(successJSON(success, message));
         } catch (e) {
-            if (e.response) {
-                console.error(e.response);
-                res.status(200).json({
-                    success: false,
-                    result: e.response
-                });
-            } else {
-                console.error(e);
-                res.status(200).json({
-                    success: false,
-                    result: e
-                });
-            }
+            console.error(e.response ? e.response.data : e);
+            res.status(200).json(json.nexonAPIError(e));
         }
     }
 });
@@ -1478,7 +1454,7 @@ app.get('/popularity/:characterName', async (req, res) => {
     const characterName = req.params.characterName;
     let date = new Date();
     date.setDate(date.getDate() - 1);
-    let dateString = `${time.getDateString(date)}`;
+    let dateString = `${time.getDateStringForAPI(date)}`;
 
     console.log(`${time.getNowDateTime()} - 인기도(${characterName})`);
 
@@ -1504,19 +1480,8 @@ app.get('/popularity/:characterName', async (req, res) => {
 
             res.status(200).json(successJSON(true, message));
         } catch (e) {
-            if (e.response) {
-                console.error(e.response);
-                res.status(200).json({
-                    success: false,
-                    result: e.response
-                });
-            } else {
-                console.error(e);
-                res.status(200).json({
-                    success: false,
-                    result: e
-                });
-            }
+            console.error(e.response ? e.response.data : e);
+            res.status(200).json(json.nexonAPIError(e));
         }
     }
 });
@@ -1524,9 +1489,7 @@ app.get('/popularity/:characterName', async (req, res) => {
 app.get('/fightingPower/:characterName', async (req, res) => {
     const url = openAPIBaseUrl + "/character/stat";
     const characterName = req.params.characterName;
-    let date = new Date();
-    date.setDate(date.getDate() - 1);
-    let dateString = time.getDateString(date);
+    let dateString = time.getAPIDateString();
 
     console.log(`${time.getNowDateTime()} - 전투력(${characterName})`);
 
@@ -1554,19 +1517,8 @@ app.get('/fightingPower/:characterName', async (req, res) => {
 
             res.status(200).json(successJSON(true, message));
         } catch (e) {
-            if (e.response) {
-                console.error(e.response);
-                res.status(200).json({
-                    success: false,
-                    result: e.response
-                });
-            } else {
-                console.error(e);
-                res.status(200).json({
-                    success: false,
-                    result: e
-                });
-            }
+            console.error(e.response ? e.response.data : e);
+            res.status(200).json(json.nexonAPIError(e));
         }
     }
 });
@@ -1574,9 +1526,7 @@ app.get('/fightingPower/:characterName', async (req, res) => {
 app.get('/hexaStat/:characterName', async (req, res) => {
     const url = openAPIBaseUrl + "/character/hexamatrix-stat";
     const characterName = req.params.characterName;
-    let date = new Date();
-    date.setDate(date.getDate() - 1);
-    let dateString = time.getDateString(date);
+    let dateString = time.getAPIDateString();
 
     console.log(`${time.getNowDateTime()} - 헥사스탯(${characterName})`);
 
@@ -1659,19 +1609,8 @@ app.get('/hexaStat/:characterName', async (req, res) => {
 
             res.status(200).json(json);
         } catch (e) {
-            if (e.response) {
-                console.error(e.response);
-                res.status(200).json({
-                    success: false,
-                    result: e.response
-                });
-            } else {
-                console.error(e);
-                res.status(200).json({
-                    success: false,
-                    result: e
-                });
-            }
+            console.error(e.response ? e.response.data : e);
+            res.status(200).json(json.nexonAPIError(e));
         }
     }
 });
@@ -1679,9 +1618,7 @@ app.get('/hexaStat/:characterName', async (req, res) => {
 app.get("/union/:characterName", async (req, res) => {
     const url = openAPIBaseUrl + "/user/union";
     const characterName = req.params.characterName;
-    let date = new Date();
-    date.setDate(date.getDate() - 1);
-    let dateString = time.getDateString(date);
+    let dateString = time.getAPIDateString();
 
     console.log(`${time.getNowDateTime()} - 유니온(${characterName})`);
 
@@ -1720,146 +1657,16 @@ app.get("/union/:characterName", async (req, res) => {
 
             res.status(200).json(json);
         } catch (e) {
-            if (e.response) {
-                console.error(e.response);
-                res.status(200).json({
-                    success: false,
-                    result: e.response
-                });
-            } else {
-                console.error(e);
-                res.status(200).json({
-                    success: false,
-                    result: e
-                });
-            }
+            console.error(e.response ? e.response.data : e);
+            res.status(200).json(json.nexonAPIError(e));
         }
     }
 });
 
-// app.get("/info_six/:characterName", async (req, res) => {
-//     const url = openAPIBaseUrl + "/character/hexamatrix";
-//     const characterName = req.params.characterName;
-//     let date = new Date();
-//     date.setDate(date.getDate() - 1);
-//     let dateString = time.getDateString(date);
-//
-//     console.log(`${time.getNowDateTime()} - HEXA강화(${characterName})`);
-//
-//     let ocid = await iden.getOcid(characterName);
-//     if (ocid == null) {
-//         console.log(`${characterName} doesn't exist`);
-//
-//         res.status(200).json(noOcidJSON(characterName));
-//     } else {
-//         console.log(`${characterName} exist`);
-//         try {
-//             const config = {
-//                 method: 'get',
-//                 url: url + `?ocid=${ocid}`,
-//                 headers: {
-//                     'accept': 'application/json',
-//                     'x-nxopen-api-key': process.env.API_KEY
-//                 },
-//             };
-//             let response = await axios(config);
-//             let hexaData = response.data;
-//             let hexaCoreArr = hexaData.character_hexa_core_equipment;
-//             let hexaCoreRes = {
-//                 "스킬 코어": [],
-//                 "마스터리 코어": [],
-//                 "강화 코어": [],
-//                 "공용 코어": []
-//             };
-//
-//             const coreRequirements = {
-//                 "스킬 코어": { sol: 150, crack: 4500 },
-//                 "마스터리 코어": { sol: 83, crack: 2252 },
-//                 "강화 코어": { sol: 123, crack: 3383 },
-//                 "공용 코어": { sol: 208, crack: 6268 }
-//             };
-//
-//             const coreCounts = {
-//                 "스킬 코어": 0,
-//                 "마스터리 코어": 0,
-//                 "강화 코어": 0,
-//                 "공용 코어": 0
-//             };
-//
-//             let usedSols = 0;
-//             let usedCracks = 0;
-//             let usedSolsForPublic = 0;
-//             let usedCracksForPublic = 0;
-//             for(let singleCore of hexaCoreArr) {
-//                 let name = singleCore.hexa_core_name;
-//                 let lev = Number(singleCore.hexa_core_level);
-//                 let evalStep = hexaEvalStep[singleCore.hexa_core_type];
-//
-//                 let data = {
-//                     "name": name,
-//                     "lev": lev
-//                 };
-//                 hexaCoreRes[singleCore.hexa_core_type].push(data);
-//
-//                 for(let i = 0; i < lev; i++) {
-//                     if(singleCore.hexa_core_type == "공용 코어") {
-//                         usedSolsForPublic += evalStep["sol"][i];
-//                         usedCracksForPublic += evalStep["crack"][i];
-//                     }
-//                     else {
-//                         usedSols += evalStep["sol"][i];
-//                         usedCracks += evalStep["crack"][i];
-//                     }
-//                 }
-//             }
-//             let solRatio = Number(((usedSols / 969) * 100).toFixed(3));
-//             let crackRatio = Number(((usedCracks / 26940) * 100).toFixed(3));
-//             let solPublicRatio = Number(((usedSolsForPublic / 208) * 100).toFixed(3));
-//             let crackPublicRatio = Number(((usedCracksForPublic / 6268) * 100).toFixed(3));
-//
-//             let message = `[${characterName}의 HEXA강화]`;
-//
-//             for(let key in hexaCoreRes) {
-//                 message += `\n\n- ${key} -`;
-//                 for(let singleData of hexaCoreRes[key]) {
-//                     // console.log(singleData["name"]);
-//                     // message += `\n${truncateText(singleData["name"])} : Lv.${singleData["lev"]}`;
-//                     message += `\n[Lv.${singleData["lev"]}] ${truncateText(singleData["name"])}`;
-//                 }
-//             }
-//
-//             message += `\n\n[HEXA강화 진척도(공용코어 제외)]\n- 솔 에르다: ${AddComma(usedSols)}개/${AddComma(969)}개(${solRatio}%)`;
-//             message += `\n- 조각: ${AddComma(usedCracks)}개/${AddComma(26940)}개(${crackRatio}%)`;
-//             message += `\n\n[HEXA강화 진척도(공용코어)]\n- 솔 에르다: ${AddComma(usedSolsForPublic)}개/${AddComma(208)}개(${solPublicRatio}%)`;
-//             message += `\n- 조각: ${AddComma(usedCracksForPublic)}개/${AddComma(6268)}개(${crackPublicRatio}%)`;
-//
-//             var json = successJSON(true, message);
-//
-//             res.status(200).json(json);
-//         } catch (e) {
-//             if (e.response) {
-//                 console.error(e.response);
-//                 res.status(200).json({
-//                     success: false,
-//                     result: e.response
-//                 });
-//             } else {
-//                 console.error(e);
-//                 res.status(200).json({
-//                     success: false,
-//                     result: e
-//                 });
-//             }
-//         }
-//     }
-// });
-
 app.get("/info_six/:characterName", async (req, res) => {
     const url = openAPIBaseUrl + "/character/hexamatrix";
     const characterName = req.params.characterName;
-    let date = new Date();
-    date.setDate(date.getDate() - 1);
-    let dateString = time.getDateString(date);
+    let dateString = time.getAPIDateString();
 
     console.log(`${time.getNowDateTime()} - HEXA강화(${characterName})`);
 
@@ -1986,19 +1793,8 @@ app.get("/info_six/:characterName", async (req, res) => {
 
             res.status(200).json(json);
         } catch (e) {
-            if (e.response) {
-                console.error(e.response);
-                res.status(200).json({
-                    success: false,
-                    result: e.response
-                });
-            } else {
-                console.error(e);
-                res.status(200).json({
-                    success: false,
-                    result: e
-                });
-            }
+            console.error(e.response ? e.response.data : e);
+            res.status(200).json(json.nexonAPIError(e));
         }
     }
 });
@@ -2112,9 +1908,7 @@ app.get("/info/:characterName", async (req, res) => {
 
     let url = openAPIBaseUrl + "/character/basic";
     const characterName = req.params.characterName;
-    let date = new Date();
-    date.setDate(date.getDate() - 1);
-    let dateString = time.getDateString(date);
+    let dateString = time.getAPIDateString();
 
     console.log(`${time.getNowDateTime()} - 캐릭터정보(${characterName})`);
 
@@ -2191,7 +1985,7 @@ app.get('/test', async (req, res) => {
             let curLev = -1;
             let dateStringArr = [];
             for (; ;) {
-                dateString = time.getDateString(date);
+                dateString = time.getDateStringForAPI(date);
                 let config = {
                     method: 'get',
                     url: url + `?ocid=${ocid}&date=${dateString}`,
@@ -2604,6 +2398,25 @@ function noOcidJSON(name) {
         result: encodeURIComponent(str),
         resultRaw: str
     };
+}
+
+function AddComma(data_value) {
+    var txtNumber = '' + data_value;
+    if (isNaN(txtNumber) || txtNumber == '') {
+        return;
+    } else {
+        var rxSplit = new RegExp('([0-9])([0-9][0-9][0-9][,.])');
+        var arrNumber = txtNumber.split('.');
+        arrNumber[0] += '.';
+        do {
+            arrNumber[0] = arrNumber[0].replace(rxSplit, '$1,$2');
+        } while (rxSplit.test(arrNumber[0]));
+        if (arrNumber.length > 1) {
+            return arrNumber.join('');
+        } else {
+            return arrNumber[0].split('.')[0];
+        }
+    }
 }
 
 function successJSON(success, result) {

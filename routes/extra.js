@@ -162,13 +162,13 @@ router.get('/help', async (req, res) => {
         helpMap.forEach((value, key) => {
             let values = new Map(Object.entries(value));
             let singleMsg = `\n\n${count++}. ${key}\n  명령어: ${values.get("command")}`;
-            if (values.get("howTo") != undefined) {
+            if (values.get("howTo") !== undefined) {
                 singleMsg += `\n${values.get("howTo")}`;
             }
             message += singleMsg;
         });
 
-        return res.status(200).json(json.success(true, message));
+        return res.status(200).json(json.success(message));
     } catch (e) {
         console.log(e);
         return res.status(200).json(json.failure(`서버 오류입니다. 관리자에게 문의하세요\n- 오류: ${e.message}`));

@@ -15,9 +15,7 @@ const openAPIBaseUrl = "https://open.api.nexon.com/maplestory/v1";
 router.get("/character", async (req, res) => {
 
     const { characterName } = req.query;
-    let date = new Date();
-    date.setDate(date.getDate() - 1);
-    let dateString = time.getDateString(date);
+    let dateString = time.getAPIDateString();
 
     console.log(`${time.getNowDateTime()} - 랭킹(${characterName})`);
 
@@ -181,21 +179,8 @@ router.get("/character", async (req, res) => {
 
             return res.status(200).json(json.success(message));
         } catch (e) {
-            if (e.response) {
-                console.error("error occurred with response");
-                console.error(e.response);
-                return res.status(200).json({
-                    success: false,
-                    result: e.response
-                });
-            } else {
-                console.error("error occurred with no response");
-                console.error(e);
-                return res.status(200).json({
-                    success: false,
-                    result: e
-                });
-            }
+            console.error(e.response ? e.response.data : e);
+            return res.status(200).json(json.nexonAPIError(e));
         }
     }
 });

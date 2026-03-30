@@ -136,7 +136,7 @@ async function findAllLevelUpsInRange(start, end, startLev, endLev, ocid) {
 }
 
 // 최적화된 라우터 (전체 기간 지원)
-router.get('/level/:chatRoomName/:talkProfileName/:characterName?', async (req, res) => {
+router.get('/level/:chatRoomName/:talkProfileName/{:characterName}', async (req, res) => {
     const chatRoomName = req.params.chatRoomName;
     const talkProfileName = req.params.talkProfileName;
     let characterName = req.params.characterName || null;

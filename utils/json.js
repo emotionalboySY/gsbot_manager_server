@@ -56,11 +56,47 @@ function failure(result) {
     };
 }
 
+// Nexon OpenAPI 에러 코드 → 한국어 메시지 매핑
+const NEXON_ERROR_MESSAGES = {
+    'OPENAPI00001': '서버 내부 오류',
+    'OPENAPI00002': '권한이 없는 경우',
+    'OPENAPI00003': '유효하지 않은 식별자',
+    'OPENAPI00004': '파라미터 누락 또는 유효하지 않음',
+    'OPENAPI00005': '유효하지 않은 API KEY',
+    'OPENAPI00006': '유효하지 않은 게임 또는 API PATH',
+    'OPENAPI00007': 'API 호출량 초과',
+    'OPENAPI00009': '데이터 준비 중',
+    'OPENAPI00010': '게임 점검 중',
+    'OPENAPI00011': 'API 점검 중'
+};
+
+// Nexon OpenAPI 에러 응답을 사용자 친화적 메시지로 변환
+function nexonAPIError(e) {
+    if (e.response && e.response.data && e.response.data.error) {
+        const errorInfo = e.response.data.error;
+        const errorName = errorInfo.name;
+        const description = NEXON_ERROR_MESSAGES[errorName] || errorInfo.message;
+        const str = `Nexon OpenAPI 오류가 발생했습니다.\n\n[${errorName}] ${description}`;
+        return {
+            success: false,
+            result: encodeURIComponent(str),
+            resultRaw: str
+        };
+    }
+    const str = `서버 오류가 발생했습니다.\n\n${e.message || e}`;
+    return {
+        success: false,
+        result: encodeURIComponent(str),
+        resultRaw: str
+    };
+}
+
 module.exports = {
     noOcid,
     success,
     APIUnavailable,
     noOGuildId,
     noWorldName,
-    failure
+    failure,
+    nexonAPIError
 };

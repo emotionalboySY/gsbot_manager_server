@@ -3,13 +3,13 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const router = express.Router();
 const time = require('../utils/time.js');
+const json = require('../utils/json.js');
+const openAPIBaseUrl = "https://open.api.nexon.com/maplestory/v1";
 
 router.get('/event', async (req, res) => {
     console.log(`${time.getNowDateTime()} - 이벤트`);
     const url = openAPIBaseUrl + "/notice-event";
-    let date = new Date();
-    date.setDate(date.getDate() - 1);
-    let dateString = getDateString(date);
+    let dateString = time.getAPIDateString();
 
     console.log(`${date.toLocaleString()} - 이벤트 리스트`);
 
@@ -35,30 +35,17 @@ router.get('/event', async (req, res) => {
         }
         eventListString += "────────────────";
 
-        res.status(200).json(successJSON(true, eventListString));
+        res.status(200).json(json.success(eventListString));
     } catch (e) {
-        if (e.response) {
-            console.error(e.response);
-            res.status(200).json({
-                success: false,
-                result: e.response
-            });
-        } else {
-            console.error(e);
-            res.status(200).json({
-                success: false,
-                result: e
-            });
-        }
+        console.error(e.response ? e.response.data : e);
+        res.status(200).json(json.nexonAPIError(e));
     }
 });
 
 router.get('/cashShop', async (req, res) => {
     console.log(`${time.getNowDateTime()} - 캐시샵공지`);
     const url = openAPIBaseUrl + "/notice-cashshop";
-    let date = new Date();
-    date.setDate(date.getDate() - 1);
-    let dateString = getDateString(date);
+    let dateString = time.getAPIDateString();
 
     console.log(`${date.toLocaleString()} - 캐시샵 공지 리스트`);
 
@@ -90,29 +77,16 @@ router.get('/cashShop', async (req, res) => {
         }
         cashshopListString += "────────────────";
 
-        res.status(200).json(successJSON(true, cashshopListString));
+        res.status(200).json(json.success(cashshopListString));
     } catch (e) {
-        if (e.response) {
-            console.error(e.response);
-            res.status(200).json({
-                success: false,
-                result: e.response
-            });
-        } else {
-            console.error(e);
-            res.status(200).json({
-                success: false,
-                result: e
-            });
-        }
+        console.error(e.response ? e.response.data : e);
+        res.status(200).json(json.nexonAPIError(e));
     }
 });
 
 router.get("/notice", async (req, res) => {
     const url = openAPIBaseUrl + "/notice";
-    let date = new Date();
-    date.setDate(date.getDate() - 1);
-    let dateString = getDateString(date);
+    let dateString = time.getAPIDateString();
 
     console.log(`${time.getNowDateTime()} - 공지사항 리스트`);
 
@@ -137,29 +111,16 @@ router.get("/notice", async (req, res) => {
         }
         noticeListString += "────────────────";
 
-        res.status(200).json(successJSON(true, noticeListString));
+        res.status(200).json(json.success(noticeListString));
     } catch (e) {
-        if (e.response) {
-            console.error(e.response);
-            res.status(200).json({
-                success: false,
-                result: e.response
-            });
-        } else {
-            console.error(e);
-            res.status(200).json({
-                success: false,
-                result: e
-            });
-        }
+        console.error(e.response ? e.response.data : e);
+        res.status(200).json(json.nexonAPIError(e));
     }
 });
 
 router.get("/update", async (req, res) => {
     const url = openAPIBaseUrl + "/notice-update";
-    let date = new Date();
-    date.setDate(date.getDate() - 1);
-    let dateString = getDateString(date);
+    let dateString = time.getAPIDateString();
 
     console.log(`${time.getNowDateTime()} - 업데이트 리스트`);
 
@@ -184,21 +145,10 @@ router.get("/update", async (req, res) => {
         }
         updateListString += "────────────────";
 
-        res.status(200).json(successJSON(true, updateListString));
+        res.status(200).json(json.success(updateListString));
     } catch (e) {
-        if (e.response) {
-            console.error(e.response);
-            res.status(200).json({
-                success: false,
-                result: e.response
-            });
-        } else {
-            console.error(e);
-            res.status(200).json({
-                success: false,
-                result: e
-            });
-        }
+        console.error(e.response ? e.response.data : e);
+        res.status(200).json(json.nexonAPIError(e));
     }
 });
 

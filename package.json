@@ -1,18 +1,18 @@
 {
   "dependencies": {
-    "axios": "^1.7.7",
-    "cheerio": "^1.0.0",
-    "cors": "^2.8.5",
+    "axios": "^1.14.0",
+    "cheerio": "^1.2.0",
+    "cors": "^2.8.6",
     "date-fns": "^4.1.0",
-    "dotenv": "^16.4.5",
-    "express": "^4.21.0",
-    "firebase-admin": "^13.5.0",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "firebase-admin": "^13.7.0",
     "http": "^0.0.1-security",
     "moment": "^2.30.1",
-    "moment-timezone": "^0.5.48",
-    "mongoose": "^8.8.4",
+    "moment-timezone": "^0.6.1",
+    "mongoose": "^9.3.3",
     "pm2": "^6.0.14",
-    "puppeteer": "^23.4.0",
+    "puppeteer": "^24.40.0",
     "querystring": "^0.2.1"
   }
 }

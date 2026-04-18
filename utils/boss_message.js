@@ -11,16 +11,14 @@ const SPECIAL_ITEM_LABELS = {
     exceptional: '[익셉셔널]'
 };
 
-const DEFAULT_TEMPLATE = `<{보스명}({난이도}) 정보>
-
-입장 가능 레벨: {입장레벨}
+const DEFAULT_TEMPLATE = `◆ {보스명} ({난이도}) ◆
+입장 Lv.{입장레벨}
 
 {페이즈정보}
 
-<{보스명}({난이도}) 주요 보상>
-
-결정석 가격: {결정석가격}메소{?솔에르다}
-솔 에르다의 기운: {솔에르다}{/솔에르다}{?아이템목록}
+◆ 주요 보상 ◆
+결정석 {결정석가격_한글} ({결정석가격}메소){?솔에르다}
+솔 에르다 {솔에르다}{/솔에르다}{?아이템목록}
 
 {아이템목록}{/아이템목록}{?특수아이템목록}
 
@@ -76,59 +74,57 @@ function renderPhaseInfo(diffData) {
     const phases = diffData.phases || [];
     const hasPhaseSpecificInfo = phases.some(p => p.monsterLevel || p.authenticForce || p.shield);
     const isSinglePhase = phases.length === 1;
+    const fmt = (v) => v.toLocaleString('ko-KR');
 
-    let info = '';
+    const lines = [];
 
     if (isSinglePhase) {
-        info += `- 단일 페이즈\n`;
-        info += `몬스터 레벨: ${diffData.monsterLevel}\n`;
-        if (diffData.arcaneForce) info += `아케인 포스: ${diffData.arcaneForce}\n`;
-        if (diffData.authenticForce) info += `어센틱 포스: ${diffData.authenticForce}\n`;
-        info += `방어율: ${diffData.defenseRate}%\n`;
-        info += `체력: ${formatHp(phases[0].hp)}`;
-        if (phases[0].shield) info += `\n방어막: ${formatHp(phases[0].shield)}`;
-    } else if (hasPhaseSpecificInfo) {
-        const hasPhaseMonsterLevel = phases.some(p => p.monsterLevel);
-        const hasPhaseAuthForce = phases.some(p => p.authenticForce);
-        info += `- 공통\n`;
-        if (!hasPhaseMonsterLevel) info += `몬스터 레벨: ${diffData.monsterLevel}\n`;
-        if (diffData.arcaneForce) info += `아케인 포스: ${diffData.arcaneForce}\n`;
-        if (!hasPhaseAuthForce && diffData.authenticForce) info += `어센틱 포스: ${diffData.authenticForce}\n`;
-        info += `방어율: ${diffData.defenseRate}%`;
-        for (const phase of phases) {
-            info += `\n\n- 페이즈 ${phase.phaseNumber}`;
-            if (phase.monsterLevel) info += `\n  . 몬스터 레벨: ${phase.monsterLevel}`;
-            if (phase.authenticForce) info += `\n  . 어센틱 포스: ${phase.authenticForce}`;
-            if (phase.description) {
-                info += `\n  . ${phase.description}`;
-            } else {
-                info += `\n  . 체력: ${formatHp(phase.hp)}`;
-            }
-            if (phase.shield) info += `\n  . 방어막: ${formatHp(phase.shield)}`;
-        }
-    } else {
-        info += `- 공통\n`;
-        info += `몬스터 레벨: ${diffData.monsterLevel}\n`;
-        if (diffData.arcaneForce) info += `아케인 포스: ${diffData.arcaneForce}\n`;
-        if (diffData.authenticForce) info += `어센틱 포스: ${diffData.authenticForce}\n`;
-        info += `방어율: ${diffData.defenseRate}%`;
-        for (const phase of phases) {
-            info += `\n\n- 페이즈 ${phase.phaseNumber}`;
-            if (phase.description) {
-                info += `\n${phase.description}`;
-            } else {
-                info += `\n체력: ${formatHp(phase.hp)}`;
-            }
-        }
+        const phase = phases[0];
+        const stats = [`Lv.${diffData.monsterLevel}`, `방어율 ${diffData.defenseRate}%`];
+        if (diffData.arcaneForce) stats.push(`아케인 ${fmt(diffData.arcaneForce)}`);
+        if (diffData.authenticForce) stats.push(`어센틱 ${fmt(diffData.authenticForce)}`);
+        lines.push(`▪ 단일 페이즈`);
+        lines.push(`  ${stats.join(' · ')}`);
+        const hp = [`HP ${formatHp(phase.hp)}`];
+        if (phase.shield) hp.push(`방어막 ${formatHp(phase.shield)}`);
+        lines.push(`  ${hp.join(' · ')}`);
+        return lines.join('\n');
     }
 
-    return info;
+    const hasPhaseMonsterLevel = phases.some(p => p.monsterLevel);
+    const hasPhaseAuthForce = phases.some(p => p.authenticForce);
+
+    // 공통 블록
+    const common = [];
+    if (!hasPhaseMonsterLevel || !hasPhaseSpecificInfo) common.push(`Lv.${diffData.monsterLevel}`);
+    common.push(`방어율 ${diffData.defenseRate}%`);
+    if (diffData.arcaneForce) common.push(`아케인 ${fmt(diffData.arcaneForce)}`);
+    if (!hasPhaseAuthForce && diffData.authenticForce) common.push(`어센틱 ${fmt(diffData.authenticForce)}`);
+    lines.push(`▪ 공통`);
+    lines.push(`  ${common.join(' · ')}`);
+
+    for (const phase of phases) {
+        lines.push('');
+        lines.push(`▪ 페이즈 ${phase.phaseNumber}`);
+        const parts = [];
+        if (phase.monsterLevel) parts.push(`Lv.${phase.monsterLevel}`);
+        if (phase.description) {
+            parts.push(phase.description);
+        } else {
+            parts.push(`HP ${formatHp(phase.hp)}`);
+        }
+        if (phase.shield) parts.push(`방어막 ${formatHp(phase.shield)}`);
+        if (phase.authenticForce) parts.push(`어센틱 ${fmt(phase.authenticForce)}`);
+        lines.push(`  ${parts.join(' · ')}`);
+    }
+
+    return lines.join('\n');
 }
 
-// 일반 아이템 목록 (한 줄에 하나씩)
+// 일반 아이템 목록 (한 줄에 하나씩, 불릿 접두)
 function renderItems(items) {
     if (!items || items.length === 0) return '';
-    return items.join('\n');
+    return items.map(item => `• ${item}`).join('\n');
 }
 
 // 특수 아이템 목록 (카테고리 라벨 포함)

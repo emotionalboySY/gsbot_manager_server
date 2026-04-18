@@ -13,6 +13,8 @@ const time = require('./utils/time.js');
 const json = require('./utils/json.js');
 const iden = require('./services/identification.js');
 const Boss = require('./models/boss');
+const BossMessageTemplate = require('./models/boss_message_template');
+const bossMessageUtil = require('./utils/boss_message');
 
 var moment = require('moment');
 moment.tz.setDefault("Asia/Seoul");
@@ -351,7 +353,20 @@ app.get('/boss/:diff/:name', async (req, res) => {
                     success = true;
                     // 표시용 난이도: DB 키가 '노말'이면 '노멀'로 표시, 나머지는 DB 키 그대로
                     const displayDiff = matchedDiff === '노말' ? '노멀' : matchedDiff;
-                    content = formatBossContent(boss.name, boss.entryLevel, displayDiff, diffData);
+                    let templateDoc = await BossMessageTemplate.findOne({ key: 'default' });
+                    if (!templateDoc) {
+                        templateDoc = await BossMessageTemplate.create({
+                            key: 'default',
+                            template: bossMessageUtil.DEFAULT_TEMPLATE
+                        });
+                    }
+                    content = bossMessageUtil.renderBossMessage(
+                        templateDoc.template,
+                        boss.name,
+                        boss.entryLevel,
+                        displayDiff,
+                        diffData
+                    );
                 } else {
                     content = `${boss.name}에는 해당 난이도(${diff})가 없습니다.\n사용 가능한 난이도: ${boss.availableDifficulties.join(', ')}`;
                 }

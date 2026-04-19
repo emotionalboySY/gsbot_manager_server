@@ -104,9 +104,10 @@ function renderPhaseInfo(diffData) {
     const hasPhaseMonsterLevel = phases.some(p => p.monsterLevel);
     const hasPhaseAuthForce = phases.some(p => p.authenticForce);
 
-    // 공통 블록
+    // 공통 블록: 페이즈별로 다른 값을 가지는 항목(monsterLevel, authenticForce)은 inline 표시되므로 제외
+    // 어느 페이즈에도 specific 값이 없는 항목은 공통 블록에서 한 번만 표시
     const common = [];
-    if (!hasPhaseMonsterLevel || !hasPhaseSpecificInfo) common.push(`Lv.${diffData.monsterLevel}`);
+    if (!hasPhaseMonsterLevel) common.push(`Lv.${diffData.monsterLevel}`);
     common.push(`방어율 ${diffData.defenseRate}%`);
     if (diffData.arcaneForce) common.push(`아케인 ${fmt(diffData.arcaneForce)}`);
     if (!hasPhaseAuthForce && diffData.authenticForce) common.push(`어센틱 ${fmt(diffData.authenticForce)}`);
@@ -117,14 +118,22 @@ function renderPhaseInfo(diffData) {
         lines.push('');
         lines.push(`▪ 페이즈 ${phase.phaseNumber}`);
         const parts = [];
-        if (phase.monsterLevel) parts.push(`Lv.${phase.monsterLevel}`);
+        // 어느 페이즈든 specific monsterLevel을 가지면 모든 페이즈에 inline 표시 (없는 페이즈는 공통값 fallback)
+        if (hasPhaseMonsterLevel) {
+            const phaseLv = phase.monsterLevel ?? diffData.monsterLevel;
+            if (phaseLv) parts.push(`Lv.${phaseLv}`);
+        }
         if (phase.description) {
             parts.push(phase.description);
         } else {
             parts.push(`HP ${formatHp(phase.hp)}`);
         }
         if (phase.shield) parts.push(`방어막 ${formatHp(phase.shield)}`);
-        if (phase.authenticForce) parts.push(`어센틱 ${fmt(phase.authenticForce)}`);
+        // 어센틱도 동일 로직
+        if (hasPhaseAuthForce) {
+            const phaseAuth = phase.authenticForce ?? diffData.authenticForce;
+            if (phaseAuth) parts.push(`어센틱 ${fmt(phaseAuth)}`);
+        }
         lines.push(`  ${parts.join(' · ')}`);
     }
 

@@ -73,11 +73,10 @@ const LiberationMaterialsSchema = new mongoose.Schema({
     }]
 }, { _id: false });
 
-LiberationMaterialsSchema.pre('validate', function(next) {
+LiberationMaterialsSchema.pre('validate', function() {
     if (this.genesis?.length > 0 && this.destiny?.length > 0) {
-        return next(new Error('제네시스와 데스티니 해방 재료는 동시에 가질 수 없습니다.'));
+        throw new Error('제네시스와 데스티니 해방 재료는 동시에 가질 수 없습니다.');
     }
-    next();
 });
 
 // 보상 서브스키마

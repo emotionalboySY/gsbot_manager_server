@@ -25,7 +25,7 @@ const DEFAULT_TEMPLATE = `◆ {보스명} ({난이도}) ◆
 {페이즈정보}
 
 ◆ 주요 보상 ◆
-결정석 {결정석가격_한글} ({결정석가격}메소){?솔에르다}
+결정석 {결정석가격_한글} 메소{?솔에르다}
 솔 에르다 {솔에르다}{/솔에르다}{?아이템목록}
 
 {아이템목록}{/아이템목록}{?특수아이템목록}
@@ -117,24 +117,38 @@ function renderPhaseInfo(diffData) {
     for (const phase of phases) {
         lines.push('');
         lines.push(`▪ 페이즈 ${phase.phaseNumber}`);
-        const parts = [];
-        // 어느 페이즈든 specific monsterLevel을 가지면 모든 페이즈에 inline 표시 (없는 페이즈는 공통값 fallback)
-        if (hasPhaseMonsterLevel) {
-            const phaseLv = phase.monsterLevel ?? diffData.monsterLevel;
-            if (phaseLv) parts.push(`Lv.${phaseLv}`);
-        }
+
+        const lvPart = hasPhaseMonsterLevel
+            ? (() => {
+                const v = phase.monsterLevel ?? diffData.monsterLevel;
+                return v ? `Lv.${v}` : null;
+              })()
+            : null;
+        const shieldPart = phase.shield ? `방어막 ${formatHp(phase.shield)}` : null;
+        const authPart = hasPhaseAuthForce
+            ? (() => {
+                const v = phase.authenticForce ?? diffData.authenticForce;
+                return v ? `어센틱 ${fmt(v)}` : null;
+              })()
+            : null;
+
         if (phase.description) {
-            parts.push(phase.description);
+            // description은 여러 줄일 수 있어 각 줄을 indent 유지하면서 별도 라인으로
+            // Lv은 description 위에 별도 줄로 (없으면 생략)
+            if (lvPart) lines.push(`  ${lvPart}`);
+            for (const descLine of phase.description.split('\n')) {
+                lines.push(`  ${descLine.trimStart()}`);
+            }
+            if (shieldPart) lines.push(`  ${shieldPart}`);
+            if (authPart) lines.push(`  ${authPart}`);
         } else {
+            const parts = [];
+            if (lvPart) parts.push(lvPart);
             parts.push(`HP ${formatHp(phase.hp)}`);
+            if (shieldPart) parts.push(shieldPart);
+            if (authPart) parts.push(authPart);
+            lines.push(`  ${parts.join(' · ')}`);
         }
-        if (phase.shield) parts.push(`방어막 ${formatHp(phase.shield)}`);
-        // 어센틱도 동일 로직
-        if (hasPhaseAuthForce) {
-            const phaseAuth = phase.authenticForce ?? diffData.authenticForce;
-            if (phaseAuth) parts.push(`어센틱 ${fmt(phaseAuth)}`);
-        }
-        lines.push(`  ${parts.join(' · ')}`);
     }
 
     return lines.join('\n');
@@ -177,15 +191,11 @@ function renderLiberationMaterials(liberationMaterials) {
         lines.push(`[데스티니 해방] ${LIBERATION_MATERIAL_NAMES.destiny} ${fmt(m.destiny)}개`);
     }
 
-    const astraParts = [];
     if (m.astraGyeokjeon && m.astraGyeokjeon > 0) {
-        astraParts.push(`${LIBERATION_MATERIAL_NAMES.astraGyeokjeon} ${fmt(m.astraGyeokjeon)}개 (파티 분배)`);
+        lines.push(`[아스트라 해방] ${LIBERATION_MATERIAL_NAMES.astraGyeokjeon} ${fmt(m.astraGyeokjeon)}개 (파티 분배)`);
     }
     if (m.astraErion && m.astraErion > 0) {
-        astraParts.push(`${LIBERATION_MATERIAL_NAMES.astraErion} ${fmt(m.astraErion)}개`);
-    }
-    if (astraParts.length > 0) {
-        lines.push(`[아스트라 해방] ${astraParts.join(' · ')}`);
+        lines.push(`[아스트라 해방] ${LIBERATION_MATERIAL_NAMES.astraErion} ${fmt(m.astraErion)}개`);
     }
 
     return lines.join('\n');

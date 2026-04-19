@@ -11,10 +11,12 @@ const SPECIAL_ITEM_LABELS = {
     exceptional: '[익셉셔널]'
 };
 
-const LIBERATION_MATERIAL_LABELS = {
-    genesis: '[제네시스 해방]',
-    destiny: '[데스티니 해방]',
-    astra: '[아스트라 해방]'
+// 해방 재료별 표시 라벨
+const LIBERATION_MATERIAL_NAMES = {
+    genesis: '어둠의 흔적',
+    destiny: '대적자의 결의',
+    astraGyeokjeon: '격전의 흔적',
+    astraErion: '에리온의 조각'
 };
 
 const DEFAULT_TEMPLATE = `◆ {보스명} ({난이도}) ◆
@@ -153,15 +155,30 @@ function renderSpecialItems(specialItems) {
 // 해방 재료 목록 (제네시스/데스티니/아스트라)
 function renderLiberationMaterials(liberationMaterials) {
     if (!liberationMaterials) return '';
+    const m = liberationMaterials.toJSON
+        ? liberationMaterials.toJSON()
+        : liberationMaterials;
+    const fmt = (n) => Number(n).toLocaleString('ko-KR');
     const lines = [];
-    for (const [category, label] of Object.entries(LIBERATION_MATERIAL_LABELS)) {
-        const itemList = liberationMaterials[category] || (liberationMaterials.get && liberationMaterials.get(category));
-        if (itemList && itemList.length > 0) {
-            for (const item of itemList) {
-                lines.push(`${label} ${item}`);
-            }
-        }
+
+    if (m.genesis && m.genesis > 0) {
+        lines.push(`[제네시스 해방] ${LIBERATION_MATERIAL_NAMES.genesis} ${fmt(m.genesis)}개`);
     }
+    if (m.destiny && m.destiny > 0) {
+        lines.push(`[데스티니 해방] ${LIBERATION_MATERIAL_NAMES.destiny} ${fmt(m.destiny)}개`);
+    }
+
+    const astraParts = [];
+    if (m.astraGyeokjeon && m.astraGyeokjeon > 0) {
+        astraParts.push(`${LIBERATION_MATERIAL_NAMES.astraGyeokjeon} ${fmt(m.astraGyeokjeon)}개 (파티 분배)`);
+    }
+    if (m.astraErion && m.astraErion > 0) {
+        astraParts.push(`${LIBERATION_MATERIAL_NAMES.astraErion} ${fmt(m.astraErion)}개`);
+    }
+    if (astraParts.length > 0) {
+        lines.push(`[아스트라 해방] ${astraParts.join(' · ')}`);
+    }
+
     return lines.join('\n');
 }
 
@@ -242,13 +259,13 @@ const RESERVED_KEYWORDS = [
     { key: '페이즈정보', label: '페이즈 정보 블록 (자동 렌더링)', sample: '- 단일 페이즈\n…' },
     { key: '아이템목록', label: '일반 아이템 목록 (줄바꿈 구분)', sample: '백옥의 보스 반지 상자(최상급)' },
     { key: '특수아이템목록', label: '특수 아이템 목록 (카테고리 라벨 포함)', sample: '[칠흑] 창세의 뱃지' },
-    { key: '해방재료목록', label: '해방 재료 목록 (제네시스/데스티니/아스트라)', sample: '[제네시스 해방] 의지의 결정' }
+    { key: '해방재료목록', label: '해방 재료 목록 (제네시스/데스티니/아스트라)', sample: '[제네시스 해방] 어둠의 흔적 1,200개' }
 ];
 
 module.exports = {
     DEFAULT_TEMPLATE,
     SPECIAL_ITEM_LABELS,
-    LIBERATION_MATERIAL_LABELS,
+    LIBERATION_MATERIAL_NAMES,
     RESERVED_KEYWORDS,
     formatHp,
     toKoreanNumber,

@@ -59,22 +59,19 @@ const SpecialItemsSchema = new mongoose.Schema({
 }, { _id: false });
 
 // 해방 재료 서브스키마
-// - genesis와 destiny는 동시에 가질 수 없음 (XOR)
-// - astra는 위 두 가지와 공존 가능
+// - genesis(어둠의 흔적)와 destiny(대적자의 결의)는 동시에 가질 수 없음 (XOR)
+// - astra는 위 두 가지와 공존 가능 (격전의 흔적은 파티원 수로 분배 / 에리온의 조각)
 const LiberationMaterialsSchema = new mongoose.Schema({
-    genesis: [{   // 제네시스 해방 재료
-        type: String
-    }],
-    destiny: [{   // 데스티니 해방 재료
-        type: String
-    }],
-    astra: [{     // 아스트라 보조무기 해방 재료
-        type: String
-    }]
+    genesis: { type: Number, default: null, min: 0 },           // 어둠의 흔적
+    destiny: { type: Number, default: null, min: 0 },           // 대적자의 결의
+    astraGyeokjeon: { type: Number, default: null, min: 0 },    // 격전의 흔적 (전체 갯수, 파티 분배)
+    astraErion: { type: Number, default: null, min: 0 }         // 에리온의 조각
 }, { _id: false });
 
 LiberationMaterialsSchema.pre('validate', function() {
-    if (this.genesis?.length > 0 && this.destiny?.length > 0) {
+    const hasGenesis = (this.genesis ?? 0) > 0;
+    const hasDestiny = (this.destiny ?? 0) > 0;
+    if (hasGenesis && hasDestiny) {
         throw new Error('제네시스와 데스티니 해방 재료는 동시에 가질 수 없습니다.');
     }
 });

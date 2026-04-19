@@ -58,6 +58,28 @@ const SpecialItemsSchema = new mongoose.Schema({
     }]
 }, { _id: false });
 
+// 해방 재료 서브스키마
+// - genesis와 destiny는 동시에 가질 수 없음 (XOR)
+// - astra는 위 두 가지와 공존 가능
+const LiberationMaterialsSchema = new mongoose.Schema({
+    genesis: [{   // 제네시스 해방 재료
+        type: String
+    }],
+    destiny: [{   // 데스티니 해방 재료
+        type: String
+    }],
+    astra: [{     // 아스트라 보조무기 해방 재료
+        type: String
+    }]
+}, { _id: false });
+
+LiberationMaterialsSchema.pre('validate', function(next) {
+    if (this.genesis?.length > 0 && this.destiny?.length > 0) {
+        return next(new Error('제네시스와 데스티니 해방 재료는 동시에 가질 수 없습니다.'));
+    }
+    next();
+});
+
 // 보상 서브스키마
 const RewardsSchema = new mongoose.Schema({
     crystalPrice: {
@@ -76,6 +98,10 @@ const RewardsSchema = new mongoose.Schema({
     }],
     specialItems: {
         type: SpecialItemsSchema,
+        default: () => ({})
+    },
+    liberationMaterials: {
+        type: LiberationMaterialsSchema,
         default: () => ({})
     }
 }, { _id: false });

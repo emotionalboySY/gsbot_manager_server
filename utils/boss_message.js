@@ -11,6 +11,12 @@ const SPECIAL_ITEM_LABELS = {
     exceptional: '[익셉셔널]'
 };
 
+const LIBERATION_MATERIAL_LABELS = {
+    genesis: '[제네시스 해방]',
+    destiny: '[데스티니 해방]',
+    astra: '[아스트라 해방]'
+};
+
 const DEFAULT_TEMPLATE = `◆ {보스명} ({난이도}) ◆
 입장 Lv.{입장레벨}
 
@@ -22,7 +28,9 @@ const DEFAULT_TEMPLATE = `◆ {보스명} ({난이도}) ◆
 
 {아이템목록}{/아이템목록}{?특수아이템목록}
 
-{특수아이템목록}{/특수아이템목록}`;
+{특수아이템목록}{/특수아이템목록}{?해방재료목록}
+
+{해방재료목록}{/해방재료목록}`;
 
 // HP 숫자를 한국어 단위로 변환 (경, 조, 억)
 function formatHp(hp) {
@@ -142,11 +150,29 @@ function renderSpecialItems(specialItems) {
     return lines.join('\n');
 }
 
+// 해방 재료 목록 (제네시스/데스티니/아스트라)
+function renderLiberationMaterials(liberationMaterials) {
+    if (!liberationMaterials) return '';
+    const lines = [];
+    for (const [category, label] of Object.entries(LIBERATION_MATERIAL_LABELS)) {
+        const itemList = liberationMaterials[category] || (liberationMaterials.get && liberationMaterials.get(category));
+        if (itemList && itemList.length > 0) {
+            for (const item of itemList) {
+                lines.push(`${label} ${item}`);
+            }
+        }
+    }
+    return lines.join('\n');
+}
+
 // 변수 컨텍스트 빌드
 function buildContext(bossName, entryLevel, displayDiff, diffData) {
     const rewards = diffData.rewards || {};
     const specialItems = rewards.specialItems
         ? (rewards.specialItems.toJSON ? rewards.specialItems.toJSON() : rewards.specialItems)
+        : {};
+    const liberationMaterials = rewards.liberationMaterials
+        ? (rewards.liberationMaterials.toJSON ? rewards.liberationMaterials.toJSON() : rewards.liberationMaterials)
         : {};
 
     return {
@@ -162,7 +188,8 @@ function buildContext(bossName, entryLevel, displayDiff, diffData) {
         '솔에르다': rewards.solErda ?? '',
         '페이즈정보': renderPhaseInfo(diffData),
         '아이템목록': renderItems(rewards.items),
-        '특수아이템목록': renderSpecialItems(specialItems)
+        '특수아이템목록': renderSpecialItems(specialItems),
+        '해방재료목록': renderLiberationMaterials(liberationMaterials)
     };
 }
 
@@ -214,18 +241,21 @@ const RESERVED_KEYWORDS = [
     { key: '솔에르다', label: '솔 에르다의 기운 (없으면 빈 문자열)', sample: 300 },
     { key: '페이즈정보', label: '페이즈 정보 블록 (자동 렌더링)', sample: '- 단일 페이즈\n…' },
     { key: '아이템목록', label: '일반 아이템 목록 (줄바꿈 구분)', sample: '백옥의 보스 반지 상자(최상급)' },
-    { key: '특수아이템목록', label: '특수 아이템 목록 (카테고리 라벨 포함)', sample: '[칠흑] 창세의 뱃지' }
+    { key: '특수아이템목록', label: '특수 아이템 목록 (카테고리 라벨 포함)', sample: '[칠흑] 창세의 뱃지' },
+    { key: '해방재료목록', label: '해방 재료 목록 (제네시스/데스티니/아스트라)', sample: '[제네시스 해방] 의지의 결정' }
 ];
 
 module.exports = {
     DEFAULT_TEMPLATE,
     SPECIAL_ITEM_LABELS,
+    LIBERATION_MATERIAL_LABELS,
     RESERVED_KEYWORDS,
     formatHp,
     toKoreanNumber,
     renderPhaseInfo,
     renderItems,
     renderSpecialItems,
+    renderLiberationMaterials,
     buildContext,
     renderTemplate,
     renderBossMessage

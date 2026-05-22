@@ -6,9 +6,9 @@ const router = express.Router();
 
 require('dotenv').config();
 
-router.get('/get/:chatRoomName/:talkProfileName', async (req, res) => {
-    const talkProfileName = req.params.talkProfileName;
-    const chatRoomName = req.params.chatRoomName;
+router.get('/get', async (req, res) => {
+    const talkProfileName = req.query.talkProfileName;
+    const chatRoomName = req.query.chatRoomName;
 
     console.log(`${time.getNowDateTime()} - 본캐찾기(${talkProfileName})`);
 

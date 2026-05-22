@@ -11,8 +11,6 @@ router.get('/event', async (req, res) => {
     const url = openAPIBaseUrl + "/notice-event";
     let dateString = time.getAPIDateString();
 
-    console.log(`${date.toLocaleString()} - 이벤트 리스트`);
-
     try {
         const config = {
             method: 'get',
@@ -46,8 +44,6 @@ router.get('/cashShop', async (req, res) => {
     console.log(`${time.getNowDateTime()} - 캐시샵공지`);
     const url = openAPIBaseUrl + "/notice-cashshop";
     let dateString = time.getAPIDateString();
-
-    console.log(`${date.toLocaleString()} - 캐시샵 공지 리스트`);
 
     try {
         const config = {

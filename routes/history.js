@@ -16,8 +16,14 @@ const API_START_DATE = new Date('2023-12-21'); // API 서비스 시작일
 
 router.get('/exp', async (req, res) => {
     const url = openAPIBaseUrl + "/character/basic";
-    let { chatRoomName, talkProfileName, characterName } = req.query;
+    let { chatRoomName, talkProfileName, characterName, days } = req.query;
     let date = new Date();
+
+    // 조회 일수 파싱(기본 7일). 1 이상 정수만 허용
+    let daysNum = Number.parseInt(days, 10);
+    if (!Number.isFinite(daysNum) || daysNum < 1) {
+        daysNum = 7;
+    }
 
     if (!characterName) {
         characterName = await mc.getMainCharacter(chatRoomName, talkProfileName);
@@ -27,9 +33,9 @@ router.get('/exp', async (req, res) => {
         }
     }
 
-    console.log(`${time.getNowDateTime()} - 경험치히스토리(${characterName})`);
+    console.log(`${time.getNowDateTime()} - 경험치히스토리(${characterName}, ${daysNum}일)`);
 
-    date.setDate(date.getDate() - 6);
+    date.setDate(date.getDate() - (daysNum - 1));
 
     let ocid = await iden.getOcid(characterName);
     if (ocid == null) {
@@ -44,7 +50,7 @@ router.get('/exp', async (req, res) => {
             let curLev = 0;
             let curLevLoaded = false;
             message = `[${characterName}의 경험치 히스토리]`;
-            for (let i = 0; i < 7; i++) {
+            for (let i = 0; i < daysNum; i++) {
                 dateString = time.getDateStringForAPI(date);
                 let config = {};
                 let today = new Date();
@@ -89,10 +95,6 @@ router.get('/exp', async (req, res) => {
                 }
                 date.setDate(date.getDate() + 1);
             }
-            let today = new Date();
-            if (today.getHours() == 0 || today.getHours() == 1) {
-                message += `\n\n매일 오전 0시부터 오전 02시까지는 Nexon OpenAPI 데이터 갱신작업으로 전일 데이터 조회가 불가능합니다. 모든 데이터를 조회하려면 02시 이후에 다시 시도해 주세요.`;
-            }
             let expDiff = rateArr[rateArr.length - 1] - rateArr[0];
             if (expDiff == 0) {
                 message += `\n\n예상 레벨업 날짜: 계산 불가(경험치 증가율 0%)`;
@@ -117,7 +119,19 @@ router.get('/exp', async (req, res) => {
 // 최적화된 라우터 (전체 기간 지원)
 router.get('/level', async (req, res) => {
 
-    let { chatRoomName, talkProfileName, characterName } = req.query;
+    let { chatRoomName, talkProfileName, characterName, limit } = req.query;
+
+    // 표시 갯수 파싱(기본 10건). "all"이면 전체 반환
+    let limitNum;
+    if (typeof limit === 'string' && limit.toLowerCase() === 'all') {
+        limitNum = Infinity;
+    } else {
+        limitNum = Number.parseInt(limit, 10);
+        if (!Number.isFinite(limitNum) || limitNum < 1) {
+            limitNum = 10;
+        }
+    }
+    const sliceHistory = (arr) => arr.slice(0, limitNum === Infinity ? arr.length : limitNum);
 
     if (!characterName) {
         characterName = await mc.getMainCharacter(chatRoomName, talkProfileName);
@@ -127,7 +141,7 @@ router.get('/level', async (req, res) => {
         }
     }
 
-    console.log(`${time.getNowDateTime()} - 레벨히스토리(${characterName})`);
+    console.log(`${time.getNowDateTime()} - 레벨히스토리(${characterName}, limit=${limitNum === Infinity ? 'all' : limitNum})`);
 
     try {
         let levHistory = [];
@@ -161,7 +175,7 @@ router.get('/level', async (req, res) => {
             await characterHistory.save();
             console.log('DB에 저장 완료');
 
-            message = message + combineLevHistories(characterHistory.levHistory.slice(0, 10));
+            message = message + combineLevHistories(sliceHistory(characterHistory.levHistory));
             return res.status(200).json(json.success(message));
         }
 
@@ -179,7 +193,7 @@ router.get('/level', async (req, res) => {
             await characterHistory.save();
             console.log('levHistory 업데이트 완료');
 
-            message = message + characterHistory.levHistory.slice(0, 10);
+            message = message + combineLevHistories(sliceHistory(characterHistory.levHistory));
             return res.status(200).json(json.success(message));
         }
 
@@ -190,7 +204,7 @@ router.get('/level', async (req, res) => {
 
         if (daysDiff === 0) {
             console.log('오늘 이미 체크함 - 캐시 반환');
-            message = message + combineLevHistories(characterHistory.levHistory.slice(0, 10));
+            message = message + combineLevHistories(sliceHistory(characterHistory.levHistory));
             return res.status(200).json(json.success(message));
         }
 
@@ -203,7 +217,7 @@ router.get('/level', async (req, res) => {
             characterHistory.updatedDate = today;
             await characterHistory.save();
 
-            message = message + combineLevHistories(characterHistory.levHistory.slice(0, 10));
+            message = message + combineLevHistories(sliceHistory(characterHistory.levHistory));
             return res.status(200).json(json.success(message));
         }
 
@@ -236,7 +250,7 @@ router.get('/level', async (req, res) => {
         await characterHistory.save();
         console.log('증분 업데이트 완료');
 
-        message = message + combineLevHistories(characterHistory.levHistory.slice(0, 10));
+        message = message + combineLevHistories(sliceHistory(characterHistory.levHistory));
         return res.status(200).json(json.success(message));
     } catch (error) {
         console.error('레벨 히스토리 조회 중 오류:', error);

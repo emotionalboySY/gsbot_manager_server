@@ -1872,6 +1872,8 @@ async function infoSixHandler(req, res) {
             let crackPublicRatio = toRatio(usedCracksForPublic, totalRequiredCracksForPublic);
 
             let message = `[${characterName}의 HEXA강화]`;
+            // 마크다운을 렌더링하는 방용 출력. 표를 쓰므로 코어 이름을 줄이지 않는다.
+            let markdown = `## ${json.escapeMarkdownCell(characterName)}의 HEXA강화`;
 
             const isVisibleCore = (core) => core["lev"] > 0 || core["eventLev"] > 0;
             const hasVisiblePublicCore = hexaCoreRes["공용 코어"].some(isVisibleCore);
@@ -1882,6 +1884,7 @@ async function infoSixHandler(req, res) {
                 if(visibleCores.length === 0) continue;
 
                 message += `\n\n- ${key} (${visibleCores.length}/${slotsInUse[key]}개) -`;
+                markdown += `\n\n### ${key} (${visibleCores.length}/${slotsInUse[key]}개)\n\n| 코어 | 레벨 |\n| --- | ---: |`;
                 for(let singleData of visibleCores) {
                     // 0인 레벨은 표기에서 제외한다
                     let levelText;
@@ -1895,22 +1898,33 @@ async function infoSixHandler(req, res) {
                         levelText = `Lv.${singleData["lev"]}`;
                     }
                     message += `\n[${levelText}] ${truncateText(singleData["name"])}`;
+                    markdown += `\n| ${json.escapeMarkdownCell(singleData["name"])} | ${levelText.replace(/Lv\./g, "")} |`;
                 }
             }
 
             message += `\n\n[HEXA강화 진척도(공용코어 제외)]\n- 솔 에르다: ${AddComma(usedSols)}개/${AddComma(totalRequiredSols)}개(${solRatio}%)`;
             message += `\n- 조각: ${AddComma(usedCracks)}개/${AddComma(totalRequiredCracks)}개(${crackRatio}%)`;
 
+            markdown += `\n\n### 진척도 (공용코어 제외)\n\n| 항목 | 보유 | 필요 | 달성률 |\n| --- | ---: | ---: | ---: |`;
+            markdown += `\n| 솔 에르다 | ${AddComma(usedSols)} | ${AddComma(totalRequiredSols)} | ${solRatio}% |`;
+            markdown += `\n| 조각 | ${AddComma(usedCracks)} | ${AddComma(totalRequiredCracks)} | ${crackRatio}% |`;
+
             if (hasVisiblePublicCore) {
                 message += `\n\n[HEXA강화 진척도(공용코어)]\n- 솔 에르다: ${AddComma(usedSolsForPublic)}개/${AddComma(totalRequiredSolsForPublic)}개(${solPublicRatio}%)`;
                 message += `\n- 조각: ${AddComma(usedCracksForPublic)}개/${AddComma(totalRequiredCracksForPublic)}개(${crackPublicRatio}%)`;
+
+                markdown += `\n\n### 진척도 (공용코어)\n\n| 항목 | 보유 | 필요 | 달성률 |\n| --- | ---: | ---: | ---: |`;
+                markdown += `\n| 솔 에르다 | ${AddComma(usedSolsForPublic)} | ${AddComma(totalRequiredSolsForPublic)} | ${solPublicRatio}% |`;
+                markdown += `\n| 조각 | ${AddComma(usedCracksForPublic)} | ${AddComma(totalRequiredCracksForPublic)} | ${crackPublicRatio}% |`;
             }
 
             if (hasEventLevel) {
-                message += `\n\n※ 이벤트 레벨은 무상 지급분이므로 강화 비용 합산에서 제외됩니다.`;
+                const eventNote = `이벤트 레벨은 무상 지급분이므로 강화 비용 합산에서 제외됩니다.`;
+                message += `\n\n※ ${eventNote}`;
+                markdown += `\n\n> ${eventNote}`;
             }
 
-            res.status(200).json(successJSON(true, message));
+            res.status(200).json(json.successWithMarkdown(message, markdown));
         } catch (e) {
             console.error(e.response ? e.response.data : e);
             res.status(200).json(json.nexonAPIError(e));
@@ -1939,17 +1953,20 @@ app.get("/hexa_cost/:startLev/:endLev", (req, res) => {
     }
 
     let message = `[HEXA 코어 강화 비용]\nLv.${startLev} → Lv.${endLev} (코어 1개 기준)\n※ 솔 에르다 / 조각`;
+    let markdown = `## HEXA 코어 강화 비용\n\n**Lv.${startLev} → Lv.${endLev}** (코어 1개 기준)\n\n| 코어 종류 | 솔 에르다 | 조각 |\n| --- | ---: | ---: |`;
 
     for (const tableKey in hexaCoreCost) {
         const cost = calcHexaCoreCostRange(tableKey, startLev, endLev);
         message += `\n\n- ${tableKey} -\n${AddComma(cost.sol)}개 / ${AddComma(cost.crack)}개`;
+        markdown += `\n| ${tableKey} | ${AddComma(cost.sol)} | ${AddComma(cost.crack)} |`;
     }
 
     if (startLev === 0) {
         message += `\n\n※ 코어 개방(0→1) 비용이 포함된 금액입니다.\n※ 6차 전직 시 지급되는 첫 번째 스킬 코어는 개방 비용이 들지 않습니다.`;
+        markdown += `\n\n> 코어 개방(0→1) 비용이 포함된 금액입니다.\n> 6차 전직 시 지급되는 첫 번째 스킬 코어는 개방 비용이 들지 않습니다.`;
     }
 
-    res.status(200).json(successJSON(true, message));
+    res.status(200).json(json.successWithMarkdown(message, markdown));
 });
 
 app.get("/exp_coupon/:type/:lev/:ratio/:expCoupons", async (req, res) => {

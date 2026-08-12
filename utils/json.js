@@ -48,6 +48,22 @@ function success(result) {
     };
 }
 
+// 평문과 마크다운 두 형식을 함께 반환한다. 봇이 방에 따라 골라 쓴다.
+// resultMarkdown 이 없는 응답(실패·안내 등)에서는 봇이 자동으로 평문으로 떨어진다.
+function successWithMarkdown(plain, markdown) {
+    return {
+        success: true,
+        result: encodeURIComponent(plain),
+        resultRaw: plain,
+        resultMarkdown: markdown
+    };
+}
+
+// 표 셀에서 구분자로 오인될 문자를 이스케이프한다
+function escapeMarkdownCell(text) {
+    return String(text).replace(/\|/g, '\\|');
+}
+
 function failure(result) {
     return {
         success: false,
@@ -94,6 +110,8 @@ function nexonAPIError(e) {
 module.exports = {
     noOcid,
     success,
+    successWithMarkdown,
+    escapeMarkdownCell,
     APIUnavailable,
     noOGuildId,
     noWorldName,

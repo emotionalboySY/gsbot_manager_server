@@ -49,6 +49,7 @@ router.get('/exp', async (req, res) => {
             let rateArr = [];
             let curLev = 0;
             let curLevLoaded = false;
+            let expRows = [];   // 마크다운 표용 행 수집
             message = `[${characterName}의 경험치 히스토리]`;
             for (let i = 0; i < daysNum; i++) {
                 dateString = time.getDateStringForAPI(date);
@@ -75,6 +76,7 @@ router.get('/exp', async (req, res) => {
                 }
                 if (today.getDay() - date.getDay() == 1 && (today.getHours() >= 0 && today.getHours() < 2)) {
                     message += `\n${dateString}: 현재 정보 갱신중`;
+                    expRows.push({ "date": dateString, "lev": null, "exp": null, "note": "갱신중" });
                 } else {
                     let response = await axios(config);
                     let basicData = response.data;
@@ -84,8 +86,10 @@ router.get('/exp', async (req, res) => {
                     let levNum = Number(lev);
                     if (exp == null || lev == null) {
                         message += `\n${dateString}: 정보 없음`;
+                        expRows.push({ "date": dateString, "lev": null, "exp": null, "note": "정보 없음" });
                     } else {
                         message += `\n${dateString}: Lv.${levNum} / ${expNum}%`;
+                        expRows.push({ "date": dateString, "lev": levNum, "exp": expNum, "note": null });
                         if (curLev == 0) {
                             curLev = levNum;
                         }
@@ -95,19 +99,21 @@ router.get('/exp', async (req, res) => {
                 }
                 date.setDate(date.getDate() + 1);
             }
+            let levUpText = "";
             let expDiff = rateArr[rateArr.length - 1] - rateArr[0];
             if (expDiff == 0) {
-                message += `\n\n예상 레벨업 날짜: 계산 불가(경험치 증가율 0%)`;
+                levUpText = "계산 불가(경험치 증가율 0%)";
+                message += `\n\n예상 레벨업 날짜: ${levUpText}`;
             } else {
                 let expDiffAvg = expDiff / rateArr.length;
                 let expToLevUp = 100 - (rateArr[rateArr.length - 1] % 100);
                 let dateToLevUp = expToLevUp / expDiffAvg;
                 let dateToCalc = new Date();
                 dateToCalc.setDate(dateToCalc.getDate() + dateToLevUp);
-                let dateToCalcStr = `\n\n예상 레벨업 날짜: ${dateToCalc.getFullYear()}년 ${String(dateToCalc.getMonth() + 1).padStart(2, '0')}월 ${String(dateToCalc.getDate()).padStart(2, '0')}일`;
-                message += dateToCalcStr;
+                levUpText = `${dateToCalc.getFullYear()}년 ${String(dateToCalc.getMonth() + 1).padStart(2, '0')}월 ${String(dateToCalc.getDate()).padStart(2, '0')}일`;
+                message += `\n\n예상 레벨업 날짜: ${levUpText}`;
             }
-            return res.status(200).json(json.success(message));
+            return res.status(200).json(json.successWithMarkdown(message, expHistoryMarkdown(characterName, expRows, levUpText)));
         } catch (e) {
             console.error(e.response.data.error);
             let message = `name: ${e.response.data.error.name}\nmessage: ${e.response.data.error.message}`;
@@ -145,7 +151,6 @@ router.get('/level', async (req, res) => {
 
     try {
         let levHistory = [];
-        let message = `[${characterName}의 레벨 히스토리]\n`;
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
@@ -175,8 +180,7 @@ router.get('/level', async (req, res) => {
             await characterHistory.save();
             console.log('DB에 저장 완료');
 
-            message = message + combineLevHistories(sliceHistory(characterHistory.levHistory));
-            return res.status(200).json(json.success(message));
+            return res.status(200).json(levelHistoryResponse(characterName, sliceHistory(characterHistory.levHistory)));
         }
 
         // 3. DB에 있지만 levHistory가 비어 있는 경우 처리
@@ -193,8 +197,7 @@ router.get('/level', async (req, res) => {
             await characterHistory.save();
             console.log('levHistory 업데이트 완료');
 
-            message = message + combineLevHistories(sliceHistory(characterHistory.levHistory));
-            return res.status(200).json(json.success(message));
+            return res.status(200).json(levelHistoryResponse(characterName, sliceHistory(characterHistory.levHistory)));
         }
 
         const updatedDate = new Date(characterHistory.updatedDate);
@@ -204,8 +207,7 @@ router.get('/level', async (req, res) => {
 
         if (daysDiff === 0) {
             console.log('오늘 이미 체크함 - 캐시 반환');
-            message = message + combineLevHistories(sliceHistory(characterHistory.levHistory));
-            return res.status(200).json(json.success(message));
+            return res.status(200).json(levelHistoryResponse(characterName, sliceHistory(characterHistory.levHistory)));
         }
 
         const todayData = await callCharacterAPI(ocid);
@@ -217,8 +219,7 @@ router.get('/level', async (req, res) => {
             characterHistory.updatedDate = today;
             await characterHistory.save();
 
-            message = message + combineLevHistories(sliceHistory(characterHistory.levHistory));
-            return res.status(200).json(json.success(message));
+            return res.status(200).json(levelHistoryResponse(characterName, sliceHistory(characterHistory.levHistory)));
         }
 
         console.log(`레벨 변화 감지: ${lastLev} -> ${curLev}`);
@@ -250,8 +251,7 @@ router.get('/level', async (req, res) => {
         await characterHistory.save();
         console.log('증분 업데이트 완료');
 
-        message = message + combineLevHistories(sliceHistory(characterHistory.levHistory));
-        return res.status(200).json(json.success(message));
+        return res.status(200).json(levelHistoryResponse(characterName, sliceHistory(characterHistory.levHistory)));
     } catch (error) {
         console.error('레벨 히스토리 조회 중 오류:', error);
         return res.status(200).json(json.failure(error.message || '레벨 히스토리를 불러오는데 실패했습니다.'));
@@ -264,6 +264,45 @@ function differenceInDays(date1, date2) {
 
 /////////////////////////////////////////////////////////
 // 레벨히스토리 조회를 위한 함수들
+
+// 마크다운을 렌더링하는 방(오픈채팅 그룹방)용 출력. 평문과 같은 데이터를 표로 낸다.
+function expHistoryMarkdown(characterName, rows, levUpText) {
+    let md = `## ${json.escapeMarkdownCell(characterName)}의 경험치 히스토리\n\n`;
+    md += `| 날짜 | 레벨 | 경험치 |\n| --- | ---: | ---: |\n`;
+    for (const row of rows) {
+        if (row.note) {
+            md += `| ${row.date} | ${row.note} | |\n`;
+        } else {
+            md += `| ${row.date} | Lv.${row.lev} | ${row.exp}% |\n`;
+        }
+    }
+    md += `\n**예상 레벨업 날짜:** ${levUpText}`;
+    return md;
+}
+
+function levHistoryRows(levHistory) {
+    return levHistory.map((item) => {
+        const date = item.date;
+        const year = date.getUTCFullYear();
+        const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(date.getUTCDate()).padStart(2, '0');
+        return { "date": `${year}-${month}-${day}`, "lev": item.lev };
+    });
+}
+
+function levelHistoryMarkdown(characterName, levHistory) {
+    let md = `## ${json.escapeMarkdownCell(characterName)}의 레벨 히스토리\n\n`;
+    md += `| 날짜 | 레벨 |\n| --- | ---: |\n`;
+    for (const row of levHistoryRows(levHistory)) {
+        md += `| ${row.date} | Lv.${row.lev} |\n`;
+    }
+    return md;
+}
+
+function levelHistoryResponse(characterName, levHistory) {
+    const plain = `[${characterName}의 레벨 히스토리]\n` + combineLevHistories(levHistory);
+    return json.successWithMarkdown(plain, levelHistoryMarkdown(characterName, levHistory));
+}
 
 function combineLevHistories(levHistory) { // levHistory를 출력용으로 텍스트 가공
     let result = "";

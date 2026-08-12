@@ -12,6 +12,7 @@ require('moment-timezone');
 const time = require('./utils/time.js');
 const json = require('./utils/json.js');
 const iden = require('./services/identification.js');
+const mc = require('./utils/main_character.js');
 const Boss = require('./models/boss');
 const BossMessageTemplate = require('./models/boss_message_template');
 const bossMessageUtil = require('./utils/boss_message');
@@ -338,6 +339,28 @@ function calcHexaTypeTotal(coreType, slotCount) {
         crack += cost.crack;
     }
     return { sol, crack };
+}
+
+// 코어 하나를 startLev 에서 endLev 까지 올리는 데 드는 비용.
+// calcHexaCoreCost 와 달리 슬롯 순번이 아니라 비용표 이름을 직접 받는다.
+function calcHexaCoreCostRange(tableKey, startLev, endLev) {
+    const table = hexaCoreCost[tableKey];
+    let sol = 0;
+    let crack = 0;
+    if (!table) return { sol, crack };
+
+    const start = Math.max(0, startLev);
+    const end = Math.min(endLev, table.sol.length);
+    for (let i = start; i < end; i++) {
+        sol += table.sol[i];
+        crack += table.crack[i];
+    }
+    return { sol, crack };
+}
+
+// 비용표의 최대 레벨 (모든 표가 동일한 길이를 가진다)
+function getHexaMaxLevel() {
+    return hexaCoreCost["스킬 코어"].sol.length;
 }
 
 const hexaStatMainMultiplier = {
@@ -1728,10 +1751,28 @@ app.get("/union/:characterName", async (req, res) => {
     }
 });
 
-app.get("/info_six/:characterName", async (req, res) => {
+// 캐릭터명을 생략하면 톡방·톡프로필에 지정된 본캐를 사용한다.
+app.get("/info_six", infoSixHandler);
+app.get("/info_six/:characterName", infoSixHandler);
+
+async function infoSixHandler(req, res) {
     const url = openAPIBaseUrl + "/character/hexamatrix";
-    const characterName = req.params.characterName;
+    const { chatRoomName, talkProfileName } = req.query;
+    let characterName = req.params.characterName;
     let dateString = time.getAPIDateString();
+
+    if (!characterName) {
+        try {
+            characterName = await mc.getMainCharacter(chatRoomName, talkProfileName);
+        } catch (e) {
+            console.error(e);
+            return res.status(200).json(json.failure("본캐 정보를 불러오지 못했습니다. 캐릭터 이름을 명령어 뒤에 입력해 주세요."));
+        }
+        if (!characterName) {
+            let message = `${talkProfileName} <<< 이 톡프로필에 저장된 본캐가 없습니다. \"/본캐 [캐릭터명]\"명령어를 통해 본캐 지정을 하거나, 찾고 싶은 캐릭터 이름을 명령어 뒤에 입력해 주세요.`;
+            return res.status(200).json(json.failure(message));
+        }
+    }
 
     console.log(`${time.getNowDateTime()} - HEXA강화(${characterName})`);
 
@@ -1875,6 +1916,40 @@ app.get("/info_six/:characterName", async (req, res) => {
             res.status(200).json(json.nexonAPIError(e));
         }
     }
+}
+
+// HEXA 코어를 [시작레벨] 에서 [목표레벨] 까지 올리는 데 필요한 비용 (코어 1개 기준)
+app.get("/hexa_cost/:startLev/:endLev", (req, res) => {
+    const maxLev = getHexaMaxLevel();
+    const startLev = Number(req.params.startLev);
+    const endLev = Number(req.params.endLev);
+
+    console.log(`${time.getNowDateTime()} - HEXA강화비용(${req.params.startLev} → ${req.params.endLev})`);
+
+    const usage = `/6차 [시작레벨] [목표레벨]\n[시작레벨]: 0 ~ ${maxLev - 1} 사이의 숫자(0일 땐 코어 개방 포함)\n[목표레벨]: 1 ~ ${maxLev} 사이의 숫자`;
+
+    if (!Number.isInteger(startLev) || !Number.isInteger(endLev)) {
+        return res.status(200).json(successJSON(false, `레벨은 정수로 입력해 주세요.\n\n${usage}`));
+    }
+    if (startLev < 0 || startLev > maxLev - 1 || endLev < 1 || endLev > maxLev) {
+        return res.status(200).json(successJSON(false, `입력할 수 있는 레벨 범위를 벗어났습니다.\n\n${usage}`));
+    }
+    if (startLev >= endLev) {
+        return res.status(200).json(successJSON(false, `목표레벨이 시작레벨보다 커야 합니다.\n\n${usage}`));
+    }
+
+    let message = `[HEXA 코어 강화 비용]\nLv.${startLev} → Lv.${endLev} (코어 1개 기준)\n※ 솔 에르다 / 조각`;
+
+    for (const tableKey in hexaCoreCost) {
+        const cost = calcHexaCoreCostRange(tableKey, startLev, endLev);
+        message += `\n\n- ${tableKey} -\n${AddComma(cost.sol)}개 / ${AddComma(cost.crack)}개`;
+    }
+
+    if (startLev === 0) {
+        message += `\n\n※ 코어 개방(0→1) 비용이 포함된 금액입니다.\n※ 6차 전직 시 지급되는 첫 번째 스킬 코어는 개방 비용이 들지 않습니다.`;
+    }
+
+    res.status(200).json(successJSON(true, message));
 });
 
 app.get("/exp_coupon/:type/:lev/:ratio/:expCoupons", async (req, res) => {

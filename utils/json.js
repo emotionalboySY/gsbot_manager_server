@@ -59,10 +59,6 @@ function successWithMarkdown(plain, markdown) {
     };
 }
 
-// 표 셀에서 구분자로 오인될 문자를 이스케이프한다
-function escapeMarkdownCell(text) {
-    return String(text).replace(/\|/g, '\\|');
-}
 
 function failure(result) {
     return {
@@ -111,7 +107,6 @@ module.exports = {
     noOcid,
     success,
     successWithMarkdown,
-    escapeMarkdownCell,
     APIUnavailable,
     noOGuildId,
     noWorldName,

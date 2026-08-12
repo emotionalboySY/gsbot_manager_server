@@ -265,18 +265,17 @@ function differenceInDays(date1, date2) {
 /////////////////////////////////////////////////////////
 // 레벨히스토리 조회를 위한 함수들
 
-// 마크다운을 렌더링하는 방(오픈채팅 그룹방)용 출력. 평문과 같은 데이터를 표로 낸다.
+// 마크다운을 렌더링하는 방(오픈채팅 그룹방)용 출력.
+// 표는 렌더링을 지원하지 않는 클라이언트(맥 카카오톡 등)에서 파이프가 그대로 노출돼
+// 평문보다 나빠지므로 쓰지 않는다. 목록은 렌더링 여부와 무관하게 읽힌다.
 function expHistoryMarkdown(characterName, rows, levUpText) {
-    let md = `## ${json.escapeMarkdownCell(characterName)}의 경험치 히스토리\n\n`;
-    md += `| 날짜 | 레벨 | 경험치 |\n| --- | ---: | ---: |\n`;
+    let md = `## ${characterName}의 경험치 히스토리\n`;
     for (const row of rows) {
-        if (row.note) {
-            md += `| ${row.date} | ${row.note} | |\n`;
-        } else {
-            md += `| ${row.date} | Lv.${row.lev} | ${row.exp}% |\n`;
-        }
+        md += row.note
+            ? `\n- ${row.date} — ${row.note}`
+            : `\n- ${row.date} — Lv.${row.lev} / ${row.exp}%`;
     }
-    md += `\n**예상 레벨업 날짜:** ${levUpText}`;
+    md += `\n\n**예상 레벨업 날짜:** ${levUpText}`;
     return md;
 }
 
@@ -291,10 +290,9 @@ function levHistoryRows(levHistory) {
 }
 
 function levelHistoryMarkdown(characterName, levHistory) {
-    let md = `## ${json.escapeMarkdownCell(characterName)}의 레벨 히스토리\n\n`;
-    md += `| 날짜 | 레벨 |\n| --- | ---: |\n`;
+    let md = `## ${characterName}의 레벨 히스토리\n`;
     for (const row of levHistoryRows(levHistory)) {
-        md += `| ${row.date} | Lv.${row.lev} |\n`;
+        md += `\n- ${row.date} — Lv.${row.lev}`;
     }
     return md;
 }

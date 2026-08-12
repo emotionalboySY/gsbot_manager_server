@@ -255,40 +255,90 @@ const advancedExpCoupon = [
     1078497000
 ]
 
-const hexaEvalStep = {
+// HEXA 코어 강화 비용 (인덱스 n = n레벨 → n+1레벨 1단계 비용, 인덱스 0 = 코어 개방)
+// "스킬 코어(3번째)"와 "공용 코어(직업군)"은 각 종류의 3번째 슬롯에만 적용되는 별도 비용표다.
+const hexaCoreCost = {
     "스킬 코어": {
-        "master": {
-            "sol": 145,
-            "crack": 4400
-        },
-        "sol": [0, 1, 1, 1, 2, 2, 2, 3, 3, 10, 3, 3, 4, 4, 4, 4, 4, 4, 5, 15, 5, 5, 5, 5, 5, 6, 6, 6, 7, 20],
-        "crack": [0, 30, 35, 40, 45, 50, 55, 60, 65, 200, 80, 90, 100, 110, 120, 130, 140, 150, 160, 350, 170, 180, 190, 200, 210, 220, 230, 240, 250, 500]
+        //        0→1   1→2  2→3  3→4  4→5  5→6  6→7  7→8  8→9 9→10 …
+        "sol":   [ 5,  1,  1,  1,  2,  2,  2,  3,  3, 10,  3,  3,  4,  4,  4,  4,  4,  4,  5, 15,  5,  5,  5,  5,  5,  6,  6,  6,  7, 20],
+        "crack": [100,  30,  35,  40,  45,  50,  55,  60,  65, 200,  80,  90, 100, 110, 120, 130, 140, 150, 160, 350, 170, 180, 190, 200, 210, 220, 230, 240, 250, 500]
+    },
+    "스킬 코어(3번째)": {
+        //        0→1   1→2  2→3  3→4  4→5  5→6  6→7  7→8  8→9 9→10 …
+        "sol":   [ 7,  1,  1,  1,  1,  2,  2,  2,  2,  8,  2,  2,  3,  3,  3,  3,  3,  3,  3, 12,  4,  4,  4,  4,  4,  4,  5,  5,  5, 14],
+        "crack": [140,  21,  26,  30,  34,  38,  43,  47,  51, 142,  62,  69,  77,  83,  91,  98, 105, 112, 120, 252, 128, 136, 145, 152, 161, 168, 177, 184, 193, 357]
     },
     "마스터리 코어": {
-        "master": {
-            "sol": 83,
-            "crack": 2252
-        },
-        "sol": [3, 1, 1, 1, 1, 1, 1, 2, 2, 5, 2, 2, 2, 2, 2, 2, 2, 2, 3, 8, 3, 3, 3, 3, 3, 3, 3, 3, 4, 10],
-        "crack": [50, 15, 18, 20, 23, 25, 28, 30, 33, 100, 40, 45, 50, 55, 60, 65, 70, 75, 80, 175, 85, 90, 95, 100, 105, 110, 115, 120, 125, 250]
+        //        0→1   1→2  2→3  3→4  4→5  5→6  6→7  7→8  8→9 9→10 …
+        "sol":   [ 3,  1,  1,  1,  1,  1,  1,  2,  2,  5,  2,  2,  2,  2,  2,  2,  2,  2,  3,  8,  3,  3,  3,  3,  3,  3,  3,  3,  4, 10],
+        "crack": [ 50,  15,  18,  20,  23,  25,  28,  30,  33, 100,  40,  45,  50,  55,  60,  65,  70,  75,  80, 175,  85,  90,  95, 100, 105, 110, 115, 120, 125, 250]
     },
     "강화 코어": {
-        "master": {
-            "sol": 123,
-            "crack": 3383
-        },
-        "sol": [4, 1, 1, 1, 2, 2, 2, 3, 3, 8, 3, 3, 3, 3, 3, 3, 3, 3, 4, 12, 4, 4, 4, 4, 4, 5, 5, 5, 6, 15],
-        "crack": [75, 23, 27, 30, 34, 38, 42, 45, 49, 150, 60, 68, 75, 83, 90, 98, 105, 113, 120, 263, 128, 135, 143, 150, 158, 165, 173, 180, 188, 375]
+        //        0→1   1→2  2→3  3→4  4→5  5→6  6→7  7→8  8→9 9→10 …
+        "sol":   [ 4,  1,  1,  1,  2,  2,  2,  3,  3,  8,  3,  3,  3,  3,  3,  3,  3,  3,  4, 12,  4,  4,  4,  4,  4,  5,  5,  5,  6, 15],
+        "crack": [ 75,  23,  27,  30,  34,  38,  42,  45,  49, 150,  60,  68,  75,  83,  90,  98, 105, 113, 120, 263, 128, 135, 143, 150, 158, 165, 173, 180, 188, 375]
     },
     "공용 코어": {
-        "master": {
-            "sol": 208,
-            "crack": 6268
-        },
-        "sol": [7, 2, 2, 2, 3, 3, 3, 5, 5, 14, 5, 5, 6, 6, 6, 6, 6, 6, 7, 17, 7, 7, 7, 7, 7, 9, 9, 9, 10, 20],
-        "crack": [125, 38, 44, 50, 57, 63, 69, 75, 82, 300, 110, 124, 138, 152, 165, 179, 193, 207, 220, 525, 234, 248, 262, 275, 289, 303, 317, 330, 344, 750]
+        //        0→1   1→2  2→3  3→4  4→5  5→6  6→7  7→8  8→9 9→10 …
+        "sol":   [ 7,  2,  2,  2,  3,  3,  3,  5,  5, 14,  5,  5,  6,  6,  6,  6,  6,  6,  7, 17,  7,  7,  7,  7,  7,  9,  9,  9, 10, 20],
+        "crack": [125,  38,  44,  50,  57,  63,  69,  75,  82, 300, 110, 124, 138, 152, 165, 179, 193, 207, 220, 525, 234, 248, 262, 275, 289, 303, 317, 330, 344, 750]
+    },
+    "공용 코어(직업군)": {
+        //        0→1   1→2  2→3  3→4  4→5  5→6  6→7  7→8  8→9 9→10 …
+        "sol":   [ 4,  1,  1,  1,  2,  2,  2,  3,  3,  9,  3,  3,  3,  3,  4,  4,  4,  4,  4, 14,  4,  5,  5,  5,  5,  5,  5,  5,  6, 18],
+        "crack": [ 90,  25,  30,  35,  40,  45,  50,  55,  60, 180,  73,  81,  90,  98, 107, 115, 124, 132, 141, 315, 151, 160, 170, 179, 189, 198, 208, 217, 227, 450]
     }
 };
+
+// 종류별 코어 슬롯 수 (게임 업데이트 시 수동 갱신)
+const hexaCoreSlots = {
+    "스킬 코어": 3,
+    "마스터리 코어": 4,
+    "강화 코어": 4,
+    "공용 코어": 3
+};
+
+// API는 코어 종류만 주고 몇 번째 슬롯인지는 주지 않으므로, 응답 배열 순서를 슬롯 순서로 본다.
+function getHexaCostTable(coreType, ordinal) {
+    if (coreType === "스킬 코어" && ordinal === 2) return hexaCoreCost["스킬 코어(3번째)"];
+    if (coreType === "공용 코어" && ordinal === 2) return hexaCoreCost["공용 코어(직업군)"];
+    return hexaCoreCost[coreType];
+}
+
+// 6차 전직 시 첫 번째 스킬 코어는 자동 지급되므로 개방(0→1) 비용이 들지 않는다.
+function hasFreeHexaOpening(coreType, ordinal) {
+    return coreType === "스킬 코어" && ordinal === 0;
+}
+
+// 코어 하나를 0레벨에서 targetLev까지 올리는 데 드는 누적 비용
+function calcHexaCoreCost(coreType, ordinal, targetLev) {
+    const table = getHexaCostTable(coreType, ordinal);
+    let sol = 0;
+    let crack = 0;
+    if (!table) return { sol, crack };
+
+    const start = hasFreeHexaOpening(coreType, ordinal) ? 1 : 0;
+    const end = Math.min(targetLev, table.sol.length);
+    for (let i = start; i < end; i++) {
+        sol += table.sol[i];
+        crack += table.crack[i];
+    }
+    return { sol, crack };
+}
+
+// 해당 종류의 코어를 slotCount개 만렙까지 올리는 데 필요한 총량
+function calcHexaTypeTotal(coreType, slotCount) {
+    let sol = 0;
+    let crack = 0;
+    for (let i = 0; i < slotCount; i++) {
+        const table = getHexaCostTable(coreType, i);
+        const maxLev = table ? table.sol.length : 0;
+        const cost = calcHexaCoreCost(coreType, i, maxLev);
+        sol += cost.sol;
+        crack += cost.crack;
+    }
+    return { sol, crack };
+}
 
 const hexaStatMainMultiplier = {
     "주력 스탯": {
@@ -1703,7 +1753,7 @@ app.get("/info_six/:characterName", async (req, res) => {
             };
             let response = await axios(config);
             let hexaData = response.data;
-            let hexaCoreArr = hexaData.character_hexa_core_equipment;
+            let hexaCoreArr = hexaData.character_hexa_core_equipment || [];
             let hexaCoreRes = {
                 "스킬 코어": [],
                 "마스터리 코어": [],
@@ -1711,23 +1761,7 @@ app.get("/info_six/:characterName", async (req, res) => {
                 "공용 코어": []
             };
 
-            // 코어별 만렙 필요 자원 정의
-            const coreRequirements = {
-                "스킬 코어": { sol: 150, crack: 4500 },
-                "마스터리 코어": { sol: 83, crack: 2252 },
-                "강화 코어": { sol: 123, crack: 3383 },
-                "공용 코어": { sol: 208, crack: 6268 }
-            };
-
-            // 현재 개방 가능한 최대 코어 개수 (수동 관리)
-            const maxCoreSlots = {
-                "스킬 코어": 2,      // 현재 개방 가능한 스킬 코어 슬롯 수
-                "마스터리 코어": 4,   // 현재 개방 가능한 마스터리 코어 슬롯 수
-                "강화 코어": 4,      // 현재 개방 가능한 강화 코어 슬롯 수
-                "공용 코어": 1       // 현재 개방 가능한 공용 코어 슬롯 수
-            };
-
-            // 코어별 개수 카운트
+            // 코어별 개수 카운트 (배열 순서 = 슬롯 순서로 간주)
             let coreCounts = {
                 "스킬 코어": 0,
                 "마스터리 코어": 0,
@@ -1739,74 +1773,103 @@ app.get("/info_six/:characterName", async (req, res) => {
             let usedCracks = 0;
             let usedSolsForPublic = 0;
             let usedCracksForPublic = 0;
+            let hasEventLevel = false;
 
             for(let singleCore of hexaCoreArr) {
-                let name = singleCore.hexa_core_name;
+                let coreType = singleCore.hexa_core_type;
+                if(!hexaCoreRes[coreType]) continue;
+
+                let ordinal = coreCounts[coreType]++;
                 let lev = Number(singleCore.hexa_core_level);
-                let evalStep = hexaEvalStep[singleCore.hexa_core_type];
+                let eventLev = Number(singleCore.hexa_core_event_level) || 0;
 
-                let data = {
-                    "name": name,
-                    "lev": lev
-                };
-                hexaCoreRes[singleCore.hexa_core_type].push(data);
+                if(eventLev > 0) hasEventLevel = true;
 
-                // 코어 개수 카운트
-                coreCounts[singleCore.hexa_core_type]++;
+                hexaCoreRes[coreType].push({
+                    "name": singleCore.hexa_core_name,
+                    "lev": lev,
+                    "eventLev": eventLev
+                });
 
-                for(let i = 0; i < lev; i++) {
-                    if(singleCore.hexa_core_type == "공용 코어") {
-                        usedSolsForPublic += evalStep["sol"][i];
-                        usedCracksForPublic += evalStep["crack"][i];
-                    }
-                    else {
-                        usedSols += evalStep["sol"][i];
-                        usedCracks += evalStep["crack"][i];
-                    }
+                // 이벤트 레벨은 무상 지급분이므로 실제 강화 레벨만 비용으로 합산한다
+                let cost = calcHexaCoreCost(coreType, ordinal, lev);
+
+                if(coreType == "공용 코어") {
+                    usedSolsForPublic += cost.sol;
+                    usedCracksForPublic += cost.crack;
+                }
+                else {
+                    usedSols += cost.sol;
+                    usedCracks += cost.crack;
                 }
             }
 
-            // 전체 필요 자원 동적 계산 (최대 슬롯 기준)
-            let totalRequiredSols = 0;
-            let totalRequiredCracks = 0;
-            let totalRequiredSolsForPublic = 0;
-            let totalRequiredCracksForPublic = 0;
-
-            // 일반 코어들 (스킬, 마스터리, 강화) - 최대 슬롯 수 기준
-            for(let coreType of ["스킬 코어", "마스터리 코어", "강화 코어"]) {
-                totalRequiredSols += maxCoreSlots[coreType] * coreRequirements[coreType].sol;
-                totalRequiredCracks += maxCoreSlots[coreType] * coreRequirements[coreType].crack;
+            // 슬롯 상수가 실제 보유 개수보다 적으면(게임 업데이트 지연) 실제 개수를 분모로 쓴다
+            let slotsInUse = {};
+            for(let coreType in hexaCoreSlots) {
+                slotsInUse[coreType] = Math.max(hexaCoreSlots[coreType], coreCounts[coreType]);
             }
 
-            // 공용 코어 - 최대 슬롯 수 기준
-            totalRequiredSolsForPublic = maxCoreSlots["공용 코어"] * coreRequirements["공용 코어"].sol;
-            totalRequiredCracksForPublic = maxCoreSlots["공용 코어"] * coreRequirements["공용 코어"].crack;
+            let totalRequiredSols = 0;
+            let totalRequiredCracks = 0;
 
-            let solRatio = Number(((usedSols / totalRequiredSols) * 100).toFixed(3));
-            let crackRatio = Number(((usedCracks / totalRequiredCracks) * 100).toFixed(3));
-            let solPublicRatio = Number(((usedSolsForPublic / totalRequiredSolsForPublic) * 100).toFixed(3));
-            let crackPublicRatio = Number(((usedCracksForPublic / totalRequiredCracksForPublic) * 100).toFixed(3));
+            for(let coreType of ["스킬 코어", "마스터리 코어", "강화 코어"]) {
+                let total = calcHexaTypeTotal(coreType, slotsInUse[coreType]);
+                totalRequiredSols += total.sol;
+                totalRequiredCracks += total.crack;
+            }
+
+            let publicTotal = calcHexaTypeTotal("공용 코어", slotsInUse["공용 코어"]);
+            let totalRequiredSolsForPublic = publicTotal.sol;
+            let totalRequiredCracksForPublic = publicTotal.crack;
+
+            const toRatio = (used, total) => total > 0 ? Number(((used / total) * 100).toFixed(3)) : 0;
+
+            let solRatio = toRatio(usedSols, totalRequiredSols);
+            let crackRatio = toRatio(usedCracks, totalRequiredCracks);
+            let solPublicRatio = toRatio(usedSolsForPublic, totalRequiredSolsForPublic);
+            let crackPublicRatio = toRatio(usedCracksForPublic, totalRequiredCracksForPublic);
 
             let message = `[${characterName}의 HEXA강화]`;
 
+            const isVisibleCore = (core) => core["lev"] > 0 || core["eventLev"] > 0;
+            const hasVisiblePublicCore = hexaCoreRes["공용 코어"].some(isVisibleCore);
+
             for(let key in hexaCoreRes) {
-                message += `\n\n- ${key} (${coreCounts[key]}/${maxCoreSlots[key]}개) -`;
-                for(let singleData of hexaCoreRes[key]) {
-                    message += `\n[Lv.${singleData["lev"]}] ${truncateText(singleData["name"])}`;
+                // 보유 레벨과 이벤트 레벨이 모두 0인 코어는 노출하지 않는다
+                let visibleCores = hexaCoreRes[key].filter(isVisibleCore);
+                if(visibleCores.length === 0) continue;
+
+                message += `\n\n- ${key} (${visibleCores.length}/${slotsInUse[key]}개) -`;
+                for(let singleData of visibleCores) {
+                    // 0인 레벨은 표기에서 제외한다
+                    let levelText;
+                    if(singleData["eventLev"] > 0 && singleData["lev"] > 0) {
+                        levelText = `이벤트 Lv.${singleData["eventLev"]}/보유 Lv.${singleData["lev"]}`;
+                    }
+                    else if(singleData["eventLev"] > 0) {
+                        levelText = `이벤트 Lv.${singleData["eventLev"]}`;
+                    }
+                    else {
+                        levelText = `Lv.${singleData["lev"]}`;
+                    }
+                    message += `\n[${levelText}] ${truncateText(singleData["name"])}`;
                 }
             }
 
             message += `\n\n[HEXA강화 진척도(공용코어 제외)]\n- 솔 에르다: ${AddComma(usedSols)}개/${AddComma(totalRequiredSols)}개(${solRatio}%)`;
             message += `\n- 조각: ${AddComma(usedCracks)}개/${AddComma(totalRequiredCracks)}개(${crackRatio}%)`;
 
-            if (maxCoreSlots["공용 코어"] > 0) {
+            if (hasVisiblePublicCore) {
                 message += `\n\n[HEXA강화 진척도(공용코어)]\n- 솔 에르다: ${AddComma(usedSolsForPublic)}개/${AddComma(totalRequiredSolsForPublic)}개(${solPublicRatio}%)`;
                 message += `\n- 조각: ${AddComma(usedCracksForPublic)}개/${AddComma(totalRequiredCracksForPublic)}개(${crackPublicRatio}%)`;
             }
 
-            var json = successJSON(true, message);
+            if (hasEventLevel) {
+                message += `\n\n※ 이벤트 레벨은 무상 지급분이므로 강화 비용 합산에서 제외됩니다.`;
+            }
 
-            res.status(200).json(json);
+            res.status(200).json(successJSON(true, message));
         } catch (e) {
             console.error(e.response ? e.response.data : e);
             res.status(200).json(json.nexonAPIError(e));

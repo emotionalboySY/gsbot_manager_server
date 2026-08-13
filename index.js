@@ -1871,10 +1871,13 @@ async function infoSixHandler(req, res) {
             let solPublicRatio = toRatio(usedSolsForPublic, totalRequiredSolsForPublic);
             let crackPublicRatio = toRatio(usedCracksForPublic, totalRequiredCracksForPublic);
 
-            let message = `[${characterName}의 HEXA강화]`;
+            const characterClass = await iden.getCharacterClass(ocid);
+            const title = iden.characterTitle(characterName, characterClass);
+
+            let message = `[${title}]\n\n[HEXA강화]`;
             // 마크다운을 렌더링하는 방용 출력. 코어 이름을 줄이지 않는다.
             // 표는 렌더링을 지원하지 않는 클라이언트에서 파이프가 그대로 노출되므로 목록을 쓴다.
-            let markdown = `## ${characterName}의 HEXA강화`;
+            let markdown = `## ${title}`;
 
             const isVisibleCore = (core) => core["lev"] > 0 || core["eventLev"] > 0;
             const hasVisiblePublicCore = hexaCoreRes["공용 코어"].some(isVisibleCore);
@@ -1925,7 +1928,7 @@ async function infoSixHandler(req, res) {
                 markdown += `\n\n> ${eventNote}`;
             }
 
-            res.status(200).json(json.successWithMarkdown(message, markdown));
+            res.status(200).json(json.successWithMarkdown(message, markdown, { characterName, characterClass, title }));
         } catch (e) {
             console.error(e.response ? e.response.data : e);
             res.status(200).json(json.nexonAPIError(e));

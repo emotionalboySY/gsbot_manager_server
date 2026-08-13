@@ -6,6 +6,10 @@ const json = require('../utils/json.js');
 const orderSheet = require('../utils/order_sheet.js');
 const cashProbability = require('../utils/cash_probability.js');
 
+// 마크다운이 렌더링되지 않는 방에서도 결과와 요약이 갈리도록 쓰는 구분선.
+// 마크다운 쪽은 --- 가 가로선으로 렌더링된다.
+const PLAIN_RULE = "──────────";
+
 const orderSheetLabel = orderSheet.labelOf;
 
 function renderOrderSheetList() {
@@ -150,15 +154,31 @@ Object.keys(cashProbability.CASH_BOXES).forEach((key) => {
             markdown += `\n- ${name}: ${AddComma(count)}회`;
         }
 
-        let footer = `\n\n총 사용 캐시: ${cost}원\n(1개당 ${AddComma(box.unitCost)}원 기준)`;
+        // 뽑기 결과와 비용 요약을 눈으로 갈라 놓는다.
+        // 평문은 구분선 문자, 마크다운은 가로선(---)으로 처리한다.
+        const plainLines = [`총 사용 캐시: ${cost}원`, `(1개당 ${AddComma(box.unitCost)}원 기준)`];
+        const markdownLines = [`1개당 ${AddComma(box.unitCost)}원 기준`];
+
         if (box.quantityUnit) {
-            footer += `\n${box.quantityUnit}를 총 ${AddComma(cashProbability.totalQuantity(counts))}개 얻었어요!`;
+            const line = `${box.quantityUnit}를 총 ${AddComma(cashProbability.totalQuantity(counts))}개 얻었어요!`;
+            plainLines.push(line);
+            markdownLines.push(line);
         }
         if (box.feverEvery) {
-            footer += `\n※ ${box.feverEvery}회마다 1개를 더 받는 피버 타임이 반영되어 있습니다.`;
+            const line = `${box.feverEvery}회마다 1개를 더 받는 피버 타임이 반영되어 있습니다.`;
+            plainLines.push(`※ ${line}`);
+            markdownLines.push(line);
         }
 
-        return res.status(200).json(json.successWithMarkdown(message + footer, markdown + footer));
+        // 마크다운에서 부가 설명을 그냥 줄바꿈으로 이으면 한 문단으로 합쳐질 수 있어
+        // (CommonMark 의 soft break) 목록으로 낸다.
+        const plainFooter = plainLines.join("\n");
+        const markdownFooter = `**총 사용 캐시: ${cost}원**\n\n` + markdownLines.map((l) => `- ${l}`).join("\n");
+
+        return res.status(200).json(json.successWithMarkdown(
+            `${message}\n\n${PLAIN_RULE}\n${plainFooter}`,
+            `${markdown}\n\n---\n\n${markdownFooter}`
+        ));
     });
 });
 

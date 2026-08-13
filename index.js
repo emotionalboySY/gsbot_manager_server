@@ -1693,9 +1693,9 @@ app.get('/hexaStat/:characterName', async (req, res) => {
                 `서브1: [Lv.${sub1Lev}] ${sub1Option} ${sub1EffStr} 증가\n` +
                 `서브2: [Lv.${sub2Lev}] ${sub2Option} ${sub2EffStr} 증가`;
 
-            var json = successJSON(true, message);
+            const responseJson = successJSON(true, message);
 
-            res.status(200).json(json);
+            res.status(200).json(responseJson);
         } catch (e) {
             console.error(e.response ? e.response.data : e);
             res.status(200).json(json.nexonAPIError(e));
@@ -1741,9 +1741,9 @@ app.get("/union/:characterName", async (req, res) => {
                 `현재 아티팩트 경험치: ${AddComma(artifact_exp)}\n` +
                 `보유 아티팩트 포인트: ${AddComma(artifact_point)}`;
 
-            var json = successJSON(true, message);
+            const responseJson = successJSON(true, message);
 
-            res.status(200).json(json);
+            res.status(200).json(responseJson);
         } catch (e) {
             console.error(e.response ? e.response.data : e);
             res.status(200).json(json.nexonAPIError(e));
@@ -2066,9 +2066,9 @@ app.get("/exp_coupon/:type/:lev/:ratio/:expCoupons", async (req, res) => {
                         `(해당 연산은 산술연산의 오차로 실제 결과와 소폭 차이가 있을 수 있습니다.)`;
                 }
 
-                var json = successJSON(true, message);
+                const responseJson = successJSON(true, message);
 
-                res.status(200).json(json);
+                res.status(200).json(responseJson);
             }
         }
     } catch (e) {
@@ -2119,9 +2119,9 @@ app.get("/info/:characterName", async (req, res) => {
                 `\n레벨: ${level}(${ratio})` +
                 `\n길드: ${guild}`;
 
-            var json = successJSON(true, message);
+            const responseJson = successJSON(true, message);
 
-            return res.status(200).json(json);
+            return res.status(200).json(responseJson);
         } catch (e) {
             if (e.response) {
                 console.error(e.response);

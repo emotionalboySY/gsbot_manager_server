@@ -11,6 +11,12 @@ function displayNameOf(scroll) {
     return scroll.displayName || scroll.name;
 }
 
+/** 목록에 보이는 이름. 이름에 성공률이 없으면 붙인다 — 검색도 이 이름으로 되어야 한다. */
+function labelOf(scroll) {
+    const name = displayNameOf(scroll);
+    return /\d+%$/.test(name) ? name : `${name} ${scroll.successRate}%`;
+}
+
 // 혼돈 주문서의 옵션 그룹명이 너무 길어 결과가 읽히지 않는다. 짧게 줄이고 각주로 설명한다.
 const GROUP_SHORT_LABEL = {
     "공격력/마력/STR/DEX/INT/LUK/방어력/이동속도/점프력": "일반 옵션",
@@ -47,7 +53,11 @@ function findScroll(query) {
 
     const target = normalize(trimmed);
     const withNumber = ORDER_SHEETS.map((scroll, i) => ({ scroll, number: i + 1 }));
-    const names = (entry) => [normalize(entry.scroll.name), normalize(displayNameOf(entry.scroll))];
+    const names = (entry) => [
+        normalize(entry.scroll.name),
+        normalize(displayNameOf(entry.scroll)),
+        normalize(labelOf(entry.scroll))
+    ];
 
     for (const match of [
         (entry) => names(entry).some((n) => n === target),
@@ -132,4 +142,4 @@ function simulate(scroll, iteration) {
     return { success, fail, rolls, totals, counts };
 }
 
-module.exports = { ORDER_SHEETS, MAX_ITERATION, findScroll, simulate, displayNameOf, groupNotesOf, normalize };
+module.exports = { ORDER_SHEETS, MAX_ITERATION, findScroll, simulate, displayNameOf, labelOf, groupNotesOf, normalize };

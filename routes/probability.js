@@ -7,11 +7,7 @@ const json = require('../utils/json.js');
 
 const orderSheet = require('../utils/order_sheet.js');
 
-/** 이름에 성공률이 이미 들어있지 않으면 붙여서 보여준다 */
-function orderSheetLabel(scroll) {
-    const name = orderSheet.displayNameOf(scroll);
-    return /\d+%$/.test(name) ? name : `${name} ${scroll.successRate}%`;
-}
+const orderSheetLabel = orderSheet.labelOf;
 
 function renderOrderSheetList() {
     const usage = `[게임 주문서 시뮬레이션]\n/주문서 [번호 또는 이름] [횟수]\n- 횟수를 생략하면 1회, 최대 ${orderSheet.MAX_ITERATION}회`;

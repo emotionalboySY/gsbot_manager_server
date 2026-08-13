@@ -14,6 +14,7 @@ const json = require('./utils/json.js');
 const iden = require('./services/identification.js');
 const mc = require('./utils/main_character.js');
 const seedRing = require('./utils/seed_ring.js');
+const { RULE } = require('./utils/format.js');
 const Boss = require('./models/boss');
 const BossMessageTemplate = require('./models/boss_message_template');
 const bossMessageUtil = require('./utils/boss_message');
@@ -1667,10 +1668,11 @@ async function infoSixHandler(req, res) {
                 }
             }
 
-            message += `\n\n[HEXA강화 진척도(공용코어 제외)]\n- 솔 에르다: ${AddComma(usedSols)}개/${AddComma(totalRequiredSols)}개(${solRatio}%)`;
+            // 코어 목록과 진척도 요약을 눈으로 갈라 놓는다
+            message += `\n\n${RULE}\n[HEXA강화 진척도(공용코어 제외)]\n- 솔 에르다: ${AddComma(usedSols)}개/${AddComma(totalRequiredSols)}개(${solRatio}%)`;
             message += `\n- 조각: ${AddComma(usedCracks)}개/${AddComma(totalRequiredCracks)}개(${crackRatio}%)`;
 
-            markdown += `\n\n### 진척도 (공용코어 제외)`;
+            markdown += `\n\n${RULE}\n\n### 진척도 (공용코어 제외)`;
             markdown += `\n- 솔 에르다: ${AddComma(usedSols)} / ${AddComma(totalRequiredSols)} (${solRatio}%)`;
             markdown += `\n- 조각: ${AddComma(usedCracks)} / ${AddComma(totalRequiredCracks)} (${crackRatio}%)`;
 

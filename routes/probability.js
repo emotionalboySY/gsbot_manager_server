@@ -7,6 +7,7 @@ const orderSheet = require('../utils/order_sheet.js');
 const cashProbability = require('../utils/cash_probability.js');
 
 const { RULE } = require('../utils/format.js');
+const ringPolish = require('../utils/ring_polish.js');
 
 const orderSheetLabel = orderSheet.labelOf;
 
@@ -108,6 +109,53 @@ router.get('/orderSheet', async (req, res) => {
     return res.status(200).json(json.successWithMarkdown(plain, markdown));
 });
 
+
+// 반지 연마 시뮬레이션. 성공하면 반지가 올라가므로 성공하는 순간 멈춘다.
+router.get('/ringPolish', (req, res) => {
+    const level = Number(req.query.level);
+    const stones = Number(req.query.stones);
+    const attempts = Number(req.query.attempts);
+
+    console.log(`${time.getNowDateTime()} - 연마석(${req.query.level}, ${req.query.stones}, ${req.query.attempts})`);
+
+    const polish = Number.isInteger(level) ? ringPolish.findPolish(level) : null;
+    if (polish === null) {
+        const levels = Object.keys(ringPolish.POLISH_TABLE).join(", ");
+        return res.status(200).json(json.failure(`연마 가능한 반지 레벨은 ${levels} 입니다.\n\n/연마석 [반지레벨] [연마석개수] [시도횟수]`));
+    }
+
+    if (!Number.isInteger(stones) || stones < 0 || stones > polish.maxStones) {
+        return res.status(200).json(json.failure(
+            `${level}→${polish.to}레벨 연마의 연마석 개수는 0 ~ ${polish.maxStones}개 사이의 정수입니다.`));
+    }
+
+    if (!Number.isInteger(attempts) || attempts < 1 || attempts > ringPolish.MAX_ATTEMPTS) {
+        return res.status(200).json(json.failure(
+            `시도 횟수는 1 ~ ${ringPolish.MAX_ATTEMPTS}회 사이의 정수입니다.`));
+    }
+
+    const rate = ringPolish.successRateOf(polish, stones);
+    const mesoPerAttempt = ringPolish.mesoPerAttemptOf(polish, stones);
+    const result = ringPolish.simulate(polish, stones, attempts);
+
+    const head = [
+        `연마석 ${AddComma(stones)}개 · 성공 확률 ${rate}%`,
+        `1회당 ${AddComma(ringPolish.toEok(mesoPerAttempt))}억 메소 · 최대 ${attempts}회 시도`
+    ];
+    const outcome = result.succeeded
+        ? `${result.attempts}회 만에 성공했습니다!`
+        : `${attempts}회 모두 실패했습니다.`;
+    const spent = [
+        `사용한 연마석: ${AddComma(result.stonesUsed)}개`,
+        `사용한 메소: ${AddComma(ringPolish.toEok(result.mesoUsed))}억`
+    ];
+
+    const title = `반지 연마 Lv.${level} → Lv.${polish.to}`;
+    const plain = `[${title}]\n${head.join("\n")}\n\n${RULE}\n${outcome}\n${spent.join("\n")}`;
+    const markdown = `## ${title}\n\n${head.map((h) => `- ${h}`).join("\n")}\n\n${RULE}\n\n**${outcome}**\n\n${spent.map((v) => `- ${v}`).join("\n")}`;
+
+    return res.status(200).json(json.successWithMarkdown(plain, markdown));
+});
 
 // 캐시샵 확률형 아이템 5종. 확률은 넥슨 공시 페이지에서 실시간으로 읽어온다.
 // 5개 라우트가 URL·라벨·단가만 다른 동일 구조였다.

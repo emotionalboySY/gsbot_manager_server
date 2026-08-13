@@ -84,7 +84,24 @@ npm install
 - API 서비스 시작일: 2023-12-21
 
 ### 환경변수
-`.env`에서 관리. `.env.example` 참고: `MONGO_URI`, `API_KEY`, `DISCORD_TOKEN`, `PORT` 등.
+`.env`에서 관리. 코드가 실제로 읽는 값은 `MONGO_URI`, `API_KEY`, `PORT` 세 개다
+(`DISCORD_TOKEN`·`DB_HOST` 같은 키는 예전 템플릿의 잔재로 아무 데서도 안 쓴다).
+
+### 로컬 개발
+```bash
+brew services start mongodb-community    # 로컬 MongoDB
+cp .env.example .env                     # MONGO_URI·API_KEY 채우기
+npm install && npm run seed              # 보스 데이터 적재
+npm start                                # 기본 3000, PORT 로 변경 가능
+```
+
+`MONGO_URI` 가 없으면 서버는 뜨지만 DB 의존 기능이 전부 실패한다
+(`/본캐` · `/건의` · `/레벨히스토리` · `/보스`). 운영과 다른 DB 이름
+(`gsbot_dev`)을 써서 실수로 운영 데이터를 건드리지 않게 한다.
+
+`routes/fcm.js` 가 `firebase-service-account.json` 을 요구해서, 그 파일이 없으면
+서버가 뜨지 않는다. FCM 을 건드리지 않는 작업이면 `node -r` 로 그 경로만
+가짜 파일로 돌려막고 띄우는 것이 간단하다.
 
 ### 프로세스 관리
 PM2로 운영. `ecosystem.config.js`에서 프로덕션/테스트 두 인스턴스를 정의하며, `models/`, `routes/`, `utils/`, `services/` 폴더를 watch 대상으로 설정.

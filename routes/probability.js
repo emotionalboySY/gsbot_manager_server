@@ -6,9 +6,7 @@ const json = require('../utils/json.js');
 const orderSheet = require('../utils/order_sheet.js');
 const cashProbability = require('../utils/cash_probability.js');
 
-// 마크다운이 렌더링되지 않는 방에서도 결과와 요약이 갈리도록 쓰는 구분선.
-// 마크다운 쪽은 --- 가 가로선으로 렌더링된다.
-const PLAIN_RULE = "──────────";
+const { RULE } = require('../utils/format.js');
 
 const orderSheetLabel = orderSheet.labelOf;
 
@@ -51,17 +49,18 @@ function renderOrderSheetResult(scroll, iteration, result) {
         .sort((a, b) => b[1] - a[1])
         .map(([option, count]) => `${option} × ${count}`);
 
+    // 세부 내역을 먼저, 합계를 구분선 뒤에 둔다 — 캐시샵 시뮬과 같은 흐름
     let plain = `[${label}] ${iteration}회\n\n${summary}`;
     let markdown = `## ${label}\n\n${iteration}회 · ${summary}`;
     const notes = orderSheet.groupNotesOf(scroll);
 
-    if (totals.length > 0) {
-        plain += `\n\n[붙은 옵션 합계]\n${totals.join("\n")}`;
-        markdown += `\n\n### 붙은 옵션 합계\n${totals.map((t) => `- ${t}`).join("\n")}`;
-    }
     if (details.length > 0) {
         plain += `\n\n[세부 내역]\n${details.join("\n")}`;
         markdown += `\n\n### 세부 내역\n${details.map((d) => `- ${d}`).join("\n")}`;
+    }
+    if (totals.length > 0) {
+        plain += `\n\n${RULE}\n[붙은 옵션 합계]\n${totals.join("\n")}`;
+        markdown += `\n\n${RULE}\n\n### 붙은 옵션 합계\n${totals.map((t) => `- ${t}`).join("\n")}`;
     }
     if (notes.length > 0) {
         plain += `\n\n${notes.map((n) => `※ ${n}`).join("\n")}`;
@@ -155,7 +154,6 @@ Object.keys(cashProbability.CASH_BOXES).forEach((key) => {
         }
 
         // 뽑기 결과와 비용 요약을 눈으로 갈라 놓는다.
-        // 평문은 구분선 문자, 마크다운은 가로선(---)으로 처리한다.
         const plainLines = [`총 사용 캐시: ${cost}원`, `(1개당 ${AddComma(box.unitCost)}원 기준)`];
         const markdownLines = [`1개당 ${AddComma(box.unitCost)}원 기준`];
 
@@ -176,8 +174,8 @@ Object.keys(cashProbability.CASH_BOXES).forEach((key) => {
         const markdownFooter = `**총 사용 캐시: ${cost}원**\n\n` + markdownLines.map((l) => `- ${l}`).join("\n");
 
         return res.status(200).json(json.successWithMarkdown(
-            `${message}\n\n${PLAIN_RULE}\n${plainFooter}`,
-            `${markdown}\n\n---\n\n${markdownFooter}`
+            `${message}\n\n${RULE}\n${plainFooter}`,
+            `${markdown}\n\n${RULE}\n\n${markdownFooter}`
         ));
     });
 });

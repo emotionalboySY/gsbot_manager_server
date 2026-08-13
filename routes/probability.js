@@ -3,6 +3,113 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const router = express.Router();
 const time = require('../utils/time.js');
+const json = require('../utils/json.js');
+
+const orderSheet = require('../utils/order_sheet.js');
+
+/** 이름에 성공률이 이미 들어있지 않으면 붙여서 보여준다 */
+function orderSheetLabel(scroll) {
+    const name = orderSheet.displayNameOf(scroll);
+    return /\d+%$/.test(name) ? name : `${name} ${scroll.successRate}%`;
+}
+
+function renderOrderSheetList() {
+    const usage = `[게임 주문서 시뮬레이션]\n/주문서 [번호 또는 이름] [횟수]\n- 횟수를 생략하면 1회, 최대 ${orderSheet.MAX_ITERATION}회`;
+    let plain = usage;
+    let markdown = `## 게임 주문서 시뮬레이션\n\n/주문서 [번호 또는 이름] [횟수]\n- 횟수를 생략하면 1회, 최대 ${orderSheet.MAX_ITERATION}회`;
+
+    let category = null;
+    orderSheet.ORDER_SHEETS.forEach((scroll, i) => {
+        if (scroll.category !== category) {
+            category = scroll.category;
+            plain += `\n\n[${category}]`;
+            markdown += `\n\n### ${category}`;
+        }
+        plain += `\n${i + 1}. ${orderSheetLabel(scroll)}`;
+        markdown += `\n${i + 1}. ${orderSheetLabel(scroll)}`;
+    });
+    return { plain, markdown };
+}
+
+function renderOrderSheetResult(scroll, iteration, result) {
+    const label = orderSheetLabel(scroll);
+    const totals = [...result.totals.entries()]
+        .map(([option, amount]) => `${option} +${AddComma(amount)}`);
+
+    if (iteration === 1) {
+        const gained = result.rolls[0];
+        const body = gained === null ? "실패" : `성공 — ${gained.join(", ")}`;
+        const oneNotes = orderSheet.groupNotesOf(scroll);
+        const noteText = oneNotes.length > 0 ? `\n\n${oneNotes.map((n) => `※ ${n}`).join("\n")}` : "";
+        return {
+            plain: `[${label}] 1회\n\n${body}${noteText}`,
+            markdown: `## ${label}\n\n1회\n\n${body}${noteText}`
+        };
+    }
+
+    const summary = `성공 ${result.success}회 / 실패 ${result.fail}회`;
+    const details = [...result.counts.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .map(([option, count]) => `${option} × ${count}`);
+
+    let plain = `[${label}] ${iteration}회\n\n${summary}`;
+    let markdown = `## ${label}\n\n${iteration}회 · ${summary}`;
+    const notes = orderSheet.groupNotesOf(scroll);
+
+    if (totals.length > 0) {
+        plain += `\n\n[붙은 옵션 합계]\n${totals.join("\n")}`;
+        markdown += `\n\n### 붙은 옵션 합계\n${totals.map((t) => `- ${t}`).join("\n")}`;
+    }
+    if (details.length > 0) {
+        plain += `\n\n[세부 내역]\n${details.join("\n")}`;
+        markdown += `\n\n### 세부 내역\n${details.map((d) => `- ${d}`).join("\n")}`;
+    }
+    if (notes.length > 0) {
+        plain += `\n\n${notes.map((n) => `※ ${n}`).join("\n")}`;
+        markdown += `\n\n${notes.map((n) => `> ${n}`).join("\n")}`;
+    }
+    return { plain, markdown };
+}
+
+// 게임 주문서 시뮬레이션. 잠재능력 부여 스크롤류·기타는 옵션 부여가 아니라 대상에서 제외했다.
+router.get('/orderSheet', async (req, res) => {
+    const query = typeof req.query.query === 'string' ? req.query.query.trim() : '';
+    const iterationRaw = req.query.iteration;
+
+    console.log(`${time.getNowDateTime()} - 주문서(${query || '목록'}, ${iterationRaw || 1})`);
+
+    if (!query) {
+        const { plain, markdown } = renderOrderSheetList();
+        return res.status(200).json(json.successWithMarkdown(plain, markdown));
+    }
+
+    let iteration = 1;
+    if (iterationRaw !== undefined && iterationRaw !== '') {
+        iteration = Number(iterationRaw);
+        if (!Number.isInteger(iteration) || iteration < 1) {
+            return res.status(200).json(json.failure(`횟수는 1 이상의 정수로 입력해 주세요.`));
+        }
+        if (iteration > orderSheet.MAX_ITERATION) {
+            return res.status(200).json(json.failure(`한 번에 최대 ${orderSheet.MAX_ITERATION}회까지 가능합니다.`));
+        }
+    }
+
+    const found = orderSheet.findScroll(query);
+    if (!found.scroll) {
+        if (found.candidates && found.candidates.length > 0) {
+            const list = found.candidates
+                .map((c) => `${c.number}. ${orderSheetLabel(c.scroll)}`)
+                .join("\n");
+            return res.status(200).json(json.failure(`"${query}" 에 해당하는 주문서가 여러 개입니다. 번호로 선택해 주세요.\n\n${list}`));
+        }
+        return res.status(200).json(json.failure(`"${query}" 에 해당하는 주문서를 찾을 수 없습니다.\n전체 목록은 /주문서 로 확인하세요.`));
+    }
+
+    const result = orderSheet.simulate(found.scroll, iteration);
+    const { plain, markdown } = renderOrderSheetResult(found.scroll, iteration, result);
+    return res.status(200).json(json.successWithMarkdown(plain, markdown));
+});
+
 
 router.get('/royal', async (req, res) => {
 

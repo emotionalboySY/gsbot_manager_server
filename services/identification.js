@@ -74,7 +74,37 @@ async function getOGuildId(worldName, guildName) {
     }
 }
 
+/**
+ * 캐릭터 직업명을 가져온다. 실패해도 호출부가 계속 진행할 수 있도록 null 을 돌려준다
+ * (직업은 제목 장식이라 이것 때문에 조회 전체가 실패하면 안 된다).
+ */
+async function getCharacterClass(ocid) {
+    try {
+        const config = {
+            method: 'get',
+            url: openAPIBaseUrl + `/character/basic?ocid=${ocid}`,
+            headers: {
+                'accept': 'application/json',
+                'x-nxopen-api-key': process.env.API_KEY
+            },
+        };
+
+        const response = await axios(config);
+        return response.data.character_class || null;
+    } catch (e) {
+        console.log(`직업 조회 실패: ${e.message}`);
+        return null;
+    }
+}
+
+/** "엽이감성 - 패스파인더" 형태의 제목. 직업을 못 가져오면 닉네임만 쓴다. */
+function characterTitle(characterName, characterClass) {
+    return characterClass ? `${characterName} - ${characterClass}` : `${characterName}`;
+}
+
 module.exports = {
     getOcid,
-    getOGuildId
+    getOGuildId,
+    getCharacterClass,
+    characterTitle
 };

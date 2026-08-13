@@ -44,6 +44,7 @@ router.get('/exp', async (req, res) => {
         res.status(200).json(json.noOcid(characterName));
     } else {
         console.log(`${characterName} exists in API`);
+        const characterClass = await iden.getCharacterClass(ocid);
         try {
             let message = ``;
             let dateString = "";
@@ -51,7 +52,8 @@ router.get('/exp', async (req, res) => {
             let curLev = 0;
             let curLevLoaded = false;
             let expRows = [];   // 마크다운 표용 행 수집
-            message = asSection ? `[경험치]` : `[${characterName}의 경험치 히스토리]`;
+            const title = iden.characterTitle(characterName, characterClass);
+            message = asSection ? `[경험치]` : `[${title}]\n\n[경험치]`;
             for (let i = 0; i < daysNum; i++) {
                 dateString = time.getDateStringForAPI(date);
                 let config = {};
@@ -116,8 +118,8 @@ router.get('/exp', async (req, res) => {
             }
             return res.status(200).json(json.successWithMarkdown(
                 message,
-                expHistoryMarkdown(characterName, expRows, levUpText, asSection),
-                { characterName }
+                expHistoryMarkdown(title, expRows, levUpText, asSection),
+                { characterName, characterClass, title }
             ));
         } catch (e) {
             console.error(e.response.data.error);
@@ -166,6 +168,8 @@ router.get('/level', async (req, res) => {
             return res.status(200).json(json.noOcid(characterName));
         }
 
+        const characterClass = await iden.getCharacterClass(ocid);
+
         // 1. 기존 데이터 있는지 조회
         let characterHistory = await findLevHistoryatDB(characterName);
 
@@ -186,7 +190,7 @@ router.get('/level', async (req, res) => {
             await characterHistory.save();
             console.log('DB에 저장 완료');
 
-            return res.status(200).json(levelHistoryResponse(characterName, sliceHistory(characterHistory.levHistory), asSection));
+            return res.status(200).json(levelHistoryResponse(characterName, characterClass, sliceHistory(characterHistory.levHistory), asSection));
         }
 
         // 3. DB에 있지만 levHistory가 비어 있는 경우 처리
@@ -203,7 +207,7 @@ router.get('/level', async (req, res) => {
             await characterHistory.save();
             console.log('levHistory 업데이트 완료');
 
-            return res.status(200).json(levelHistoryResponse(characterName, sliceHistory(characterHistory.levHistory), asSection));
+            return res.status(200).json(levelHistoryResponse(characterName, characterClass, sliceHistory(characterHistory.levHistory), asSection));
         }
 
         const updatedDate = new Date(characterHistory.updatedDate);
@@ -213,7 +217,7 @@ router.get('/level', async (req, res) => {
 
         if (daysDiff === 0) {
             console.log('오늘 이미 체크함 - 캐시 반환');
-            return res.status(200).json(levelHistoryResponse(characterName, sliceHistory(characterHistory.levHistory), asSection));
+            return res.status(200).json(levelHistoryResponse(characterName, characterClass, sliceHistory(characterHistory.levHistory), asSection));
         }
 
         const todayData = await callCharacterAPI(ocid);
@@ -225,7 +229,7 @@ router.get('/level', async (req, res) => {
             characterHistory.updatedDate = today;
             await characterHistory.save();
 
-            return res.status(200).json(levelHistoryResponse(characterName, sliceHistory(characterHistory.levHistory), asSection));
+            return res.status(200).json(levelHistoryResponse(characterName, characterClass, sliceHistory(characterHistory.levHistory), asSection));
         }
 
         console.log(`레벨 변화 감지: ${lastLev} -> ${curLev}`);
@@ -257,7 +261,7 @@ router.get('/level', async (req, res) => {
         await characterHistory.save();
         console.log('증분 업데이트 완료');
 
-        return res.status(200).json(levelHistoryResponse(characterName, sliceHistory(characterHistory.levHistory), asSection));
+        return res.status(200).json(levelHistoryResponse(characterName, characterClass, sliceHistory(characterHistory.levHistory), asSection));
     } catch (error) {
         console.error('레벨 히스토리 조회 중 오류:', error);
         return res.status(200).json(json.failure(error.message || '레벨 히스토리를 불러오는데 실패했습니다.'));
@@ -276,8 +280,8 @@ function differenceInDays(date1, date2) {
 // 평문보다 나빠지므로 쓰지 않는다. 목록은 렌더링 여부와 무관하게 읽힌다.
 // section=1 이면 합본(/히스토리)용 소제목으로 낸다.
 // 합본에서 "OO의 경험치 히스토리 / OO의 레벨 히스토리" 로 이름이 두 번 나오면 어색하다.
-function expHistoryMarkdown(characterName, rows, levUpText, asSection) {
-    let md = asSection ? `### 경험치\n` : `## ${characterName}의 경험치 히스토리\n`;
+function expHistoryMarkdown(title, rows, levUpText, asSection) {
+    let md = asSection ? `### 경험치\n` : `## ${title}\n\n### 경험치\n`;
     for (const row of rows) {
         md += row.note
             ? `\n- ${row.date} — ${row.note}`
@@ -297,21 +301,22 @@ function levHistoryRows(levHistory) {
     });
 }
 
-function levelHistoryMarkdown(characterName, levHistory, asSection) {
-    let md = asSection ? `### 레벨\n` : `## ${characterName}의 레벨 히스토리\n`;
+function levelHistoryMarkdown(title, levHistory, asSection) {
+    let md = asSection ? `### 레벨\n` : `## ${title}\n\n### 레벨\n`;
     for (const row of levHistoryRows(levHistory)) {
         md += `\n- ${row.date} — Lv.${row.lev}`;
     }
     return md;
 }
 
-function levelHistoryResponse(characterName, levHistory, asSection) {
-    const header = asSection ? `[레벨]` : `[${characterName}의 레벨 히스토리]`;
+function levelHistoryResponse(characterName, characterClass, levHistory, asSection) {
+    const title = iden.characterTitle(characterName, characterClass);
+    const header = asSection ? `[레벨]` : `[${title}]\n\n[레벨]`;
     const plain = `${header}\n` + combineLevHistories(levHistory);
     return json.successWithMarkdown(
         plain,
-        levelHistoryMarkdown(characterName, levHistory, asSection),
-        { characterName }
+        levelHistoryMarkdown(title, levHistory, asSection),
+        { characterName, characterClass, title }
     );
 }
 

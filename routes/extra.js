@@ -5,6 +5,28 @@ const router = express.Router();
 const mc = require('../utils/main_character.js');
 const json = require('../utils/json.js');
 const time = require('../utils/time.js');
+const orderSheet = require('../utils/order_sheet.js');
+
+// 일부 항목은 선택지가 많아 사용법만으로는 부족하다. 항목 상세에서만 목록을 덧붙인다.
+// (전체 도움말에 넣으면 분류로 줄인 의미가 없어진다)
+const HELP_APPENDIX = {
+    orderSheet: () => {
+        let plain = '';
+        let markdown = '';
+        let category = null;
+
+        orderSheet.ORDER_SHEETS.forEach((scroll, i) => {
+            if (scroll.category !== category) {
+                category = scroll.category;
+                plain += `\n\n[${category}]`;
+                markdown += `\n\n**${category}**`;
+            }
+            plain += `\n${i + 1}. ${orderSheet.labelOf(scroll)}`;
+            markdown += `\n${i + 1}. ${orderSheet.labelOf(scroll)}`;
+        });
+        return { plain, markdown };
+    }
+};
 
 const helpText = {
     "캐릭터 조회": {
@@ -110,7 +132,8 @@ const helpText = {
         },
         "주문서": {
             "command": "/주문서 [번호 또는 이름] [횟수]",
-            "howTo": "[번호 또는 이름]: 주문서 번호 또는 이름(생략 시 전체 목록)\n[횟수]: 1 ~ 20 사이의 숫자(생략 시 1회)\n잠재능력 부여 스크롤류와 기타는 제외되어 있습니다."
+            "howTo": "[번호 또는 이름]: 주문서 번호 또는 이름(생략 시 전체 목록)\n  → 번호 목록은 \"/도움말 주문서\" 로 확인\n[횟수]: 1 ~ 20 사이의 숫자(생략 시 1회)\n잠재능력 부여 스크롤류와 기타는 제외되어 있습니다.",
+            "appendix": "orderSheet"
         },
         "녹옥의 보스 반지 상자": {
             "command": "/녹옥 [횟수]",
@@ -210,6 +233,12 @@ function renderHelpEntry(name, entry, index) {
     if (entry.howTo !== undefined) {
         plain += `\n${entry.howTo}`;
         markdown += `\n${entry.howTo}`;
+    }
+    // 분류 전체를 볼 때(index 있음)는 너무 길어지므로 단일 항목 조회에서만 붙인다
+    if (!index && entry.appendix && HELP_APPENDIX[entry.appendix]) {
+        const appendix = HELP_APPENDIX[entry.appendix]();
+        plain += appendix.plain;
+        markdown += appendix.markdown;
     }
     return { plain, markdown };
 }

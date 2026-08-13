@@ -17,6 +17,7 @@ const API_START_DATE = new Date('2023-12-21'); // API 서비스 시작일
 router.get('/exp', async (req, res) => {
     const url = openAPIBaseUrl + "/character/basic";
     let { chatRoomName, talkProfileName, characterName, days } = req.query;
+    const asSection = !!req.query.section;   // 합본(/히스토리)에서 소제목으로 낼지
     let date = new Date();
 
     // 조회 일수 파싱(기본 7일). 1 이상 정수만 허용
@@ -50,7 +51,7 @@ router.get('/exp', async (req, res) => {
             let curLev = 0;
             let curLevLoaded = false;
             let expRows = [];   // 마크다운 표용 행 수집
-            message = `[${characterName}의 경험치 히스토리]`;
+            message = asSection ? `[경험치]` : `[${characterName}의 경험치 히스토리]`;
             for (let i = 0; i < daysNum; i++) {
                 dateString = time.getDateStringForAPI(date);
                 let config = {};
@@ -113,7 +114,11 @@ router.get('/exp', async (req, res) => {
                 levUpText = `${dateToCalc.getFullYear()}년 ${String(dateToCalc.getMonth() + 1).padStart(2, '0')}월 ${String(dateToCalc.getDate()).padStart(2, '0')}일`;
                 message += `\n\n예상 레벨업 날짜: ${levUpText}`;
             }
-            return res.status(200).json(json.successWithMarkdown(message, expHistoryMarkdown(characterName, expRows, levUpText)));
+            return res.status(200).json(json.successWithMarkdown(
+                message,
+                expHistoryMarkdown(characterName, expRows, levUpText, asSection),
+                { characterName }
+            ));
         } catch (e) {
             console.error(e.response.data.error);
             let message = `name: ${e.response.data.error.name}\nmessage: ${e.response.data.error.message}`;
@@ -126,6 +131,7 @@ router.get('/exp', async (req, res) => {
 router.get('/level', async (req, res) => {
 
     let { chatRoomName, talkProfileName, characterName, limit } = req.query;
+    const asSection = !!req.query.section;   // 합본(/히스토리)에서 소제목으로 낼지
 
     // 표시 갯수 파싱(기본 10건). "all"이면 전체 반환
     let limitNum;
@@ -180,7 +186,7 @@ router.get('/level', async (req, res) => {
             await characterHistory.save();
             console.log('DB에 저장 완료');
 
-            return res.status(200).json(levelHistoryResponse(characterName, sliceHistory(characterHistory.levHistory)));
+            return res.status(200).json(levelHistoryResponse(characterName, sliceHistory(characterHistory.levHistory), asSection));
         }
 
         // 3. DB에 있지만 levHistory가 비어 있는 경우 처리
@@ -197,7 +203,7 @@ router.get('/level', async (req, res) => {
             await characterHistory.save();
             console.log('levHistory 업데이트 완료');
 
-            return res.status(200).json(levelHistoryResponse(characterName, sliceHistory(characterHistory.levHistory)));
+            return res.status(200).json(levelHistoryResponse(characterName, sliceHistory(characterHistory.levHistory), asSection));
         }
 
         const updatedDate = new Date(characterHistory.updatedDate);
@@ -207,7 +213,7 @@ router.get('/level', async (req, res) => {
 
         if (daysDiff === 0) {
             console.log('오늘 이미 체크함 - 캐시 반환');
-            return res.status(200).json(levelHistoryResponse(characterName, sliceHistory(characterHistory.levHistory)));
+            return res.status(200).json(levelHistoryResponse(characterName, sliceHistory(characterHistory.levHistory), asSection));
         }
 
         const todayData = await callCharacterAPI(ocid);
@@ -219,7 +225,7 @@ router.get('/level', async (req, res) => {
             characterHistory.updatedDate = today;
             await characterHistory.save();
 
-            return res.status(200).json(levelHistoryResponse(characterName, sliceHistory(characterHistory.levHistory)));
+            return res.status(200).json(levelHistoryResponse(characterName, sliceHistory(characterHistory.levHistory), asSection));
         }
 
         console.log(`레벨 변화 감지: ${lastLev} -> ${curLev}`);
@@ -251,7 +257,7 @@ router.get('/level', async (req, res) => {
         await characterHistory.save();
         console.log('증분 업데이트 완료');
 
-        return res.status(200).json(levelHistoryResponse(characterName, sliceHistory(characterHistory.levHistory)));
+        return res.status(200).json(levelHistoryResponse(characterName, sliceHistory(characterHistory.levHistory), asSection));
     } catch (error) {
         console.error('레벨 히스토리 조회 중 오류:', error);
         return res.status(200).json(json.failure(error.message || '레벨 히스토리를 불러오는데 실패했습니다.'));
@@ -268,8 +274,10 @@ function differenceInDays(date1, date2) {
 // 마크다운을 렌더링하는 방(오픈채팅 그룹방)용 출력.
 // 표는 렌더링을 지원하지 않는 클라이언트(맥 카카오톡 등)에서 파이프가 그대로 노출돼
 // 평문보다 나빠지므로 쓰지 않는다. 목록은 렌더링 여부와 무관하게 읽힌다.
-function expHistoryMarkdown(characterName, rows, levUpText) {
-    let md = `## ${characterName}의 경험치 히스토리\n`;
+// section=1 이면 합본(/히스토리)용 소제목으로 낸다.
+// 합본에서 "OO의 경험치 히스토리 / OO의 레벨 히스토리" 로 이름이 두 번 나오면 어색하다.
+function expHistoryMarkdown(characterName, rows, levUpText, asSection) {
+    let md = asSection ? `### 경험치\n` : `## ${characterName}의 경험치 히스토리\n`;
     for (const row of rows) {
         md += row.note
             ? `\n- ${row.date} — ${row.note}`
@@ -289,17 +297,22 @@ function levHistoryRows(levHistory) {
     });
 }
 
-function levelHistoryMarkdown(characterName, levHistory) {
-    let md = `## ${characterName}의 레벨 히스토리\n`;
+function levelHistoryMarkdown(characterName, levHistory, asSection) {
+    let md = asSection ? `### 레벨\n` : `## ${characterName}의 레벨 히스토리\n`;
     for (const row of levHistoryRows(levHistory)) {
         md += `\n- ${row.date} — Lv.${row.lev}`;
     }
     return md;
 }
 
-function levelHistoryResponse(characterName, levHistory) {
-    const plain = `[${characterName}의 레벨 히스토리]\n` + combineLevHistories(levHistory);
-    return json.successWithMarkdown(plain, levelHistoryMarkdown(characterName, levHistory));
+function levelHistoryResponse(characterName, levHistory, asSection) {
+    const header = asSection ? `[레벨]` : `[${characterName}의 레벨 히스토리]`;
+    const plain = `${header}\n` + combineLevHistories(levHistory);
+    return json.successWithMarkdown(
+        plain,
+        levelHistoryMarkdown(characterName, levHistory, asSection),
+        { characterName }
+    );
 }
 
 function combineLevHistories(levHistory) { // levHistory를 출력용으로 텍스트 가공

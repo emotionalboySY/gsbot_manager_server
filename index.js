@@ -1719,13 +1719,15 @@ app.get("/hexa_cost/:startLev/:endLev", (req, res) => {
         return res.status(200).json(successJSON(false, `목표레벨이 시작레벨보다 커야 합니다.\n\n${usage}`));
     }
 
-    let message = `[HEXA 코어 강화 비용]\nLv.${startLev} → Lv.${endLev} (코어 1개 기준)\n※ 솔 에르다 / 조각`;
-    let markdown = `## HEXA 코어 강화 비용\n\n**Lv.${startLev} → Lv.${endLev}** (코어 1개 기준)\n`;
+    // 코어 종류마다 단위가 같으므로 "솔 에르다 / 조각"은 머리말에서 한 번만 알리고,
+    // 항목은 숫자만 한 줄로 낸다. 이름과 단위를 매 줄에 붙이면 줄바꿈이 생겨 읽기 나쁘다.
+    let message = `[HEXA 코어 강화 비용]\nLv.${startLev} → Lv.${endLev} (코어 1개 기준)\n※ 솔 에르다 개수 / 조각 개수\n`;
+    let markdown = `## HEXA 코어 강화 비용\n\n**Lv.${startLev} → Lv.${endLev}** (코어 1개 기준)\n솔 에르다 개수 / 조각 개수\n`;
 
     for (const tableKey in hexaCoreCost) {
         const cost = calcHexaCoreCostRange(tableKey, startLev, endLev);
-        message += `\n\n- ${tableKey} -\n${AddComma(cost.sol)}개 / ${AddComma(cost.crack)}개`;
-        markdown += `\n- ${tableKey} — 솔 에르다 ${AddComma(cost.sol)} / 조각 ${AddComma(cost.crack)}`;
+        message += `\n${tableKey} — ${AddComma(cost.sol)} / ${AddComma(cost.crack)}`;
+        markdown += `\n- ${tableKey} — ${AddComma(cost.sol)} / ${AddComma(cost.crack)}`;
     }
 
     if (startLev === 0) {

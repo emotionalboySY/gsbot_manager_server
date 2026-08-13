@@ -358,15 +358,6 @@ function calcHexaCoreCostRange(tableKey, startLev, endLev) {
     return { sol, crack };
 }
 
-// 마크다운 경로 출력용 구분선. 마크다운 문법은 쓰지 않는다 —
-// 렌더링 지원이 클라이언트마다 갈려서 기호가 그대로 노출되는 쪽이 더 나쁘다.
-const RICH_RULE = "─────────────";
-
-// 진척도는 소수 셋째 자리까지 필요하지 않다. 한 자리로 줄여 읽기 쉽게 한다.
-function richPercent(ratio) {
-    return `${Number(ratio).toFixed(1)}%`;
-}
-
 // 비용표의 최대 레벨 (모든 표가 동일한 길이를 가진다)
 function getHexaMaxLevel() {
     return hexaCoreCost["스킬 코어"].sol.length;
@@ -1881,13 +1872,12 @@ async function infoSixHandler(req, res) {
             let crackPublicRatio = toRatio(usedCracksForPublic, totalRequiredCracksForPublic);
 
             let message = `[${characterName}의 HEXA강화]`;
-            // 마크다운 경로 출력. 이 경로의 이점은 코어 이름을 자르지 않는 것이다.
-            let markdown = `${characterName} HEXA강화\n${RICH_RULE}`;
+            // 마크다운을 렌더링하는 방용 출력. 코어 이름을 줄이지 않는다.
+            // 표는 렌더링을 지원하지 않는 클라이언트에서 파이프가 그대로 노출되므로 목록을 쓴다.
+            let markdown = `## ${characterName}의 HEXA강화`;
 
             const isVisibleCore = (core) => core["lev"] > 0 || core["eventLev"] > 0;
             const hasVisiblePublicCore = hexaCoreRes["공용 코어"].some(isVisibleCore);
-            // 첫 섹션은 구분선 바로 아래에 붙이고, 이후 섹션 앞에만 빈 줄을 넣는다
-            let isFirstRichSection = true;
 
             for(let key in hexaCoreRes) {
                 // 보유 레벨과 이벤트 레벨이 모두 0인 코어는 노출하지 않는다
@@ -1895,8 +1885,7 @@ async function infoSixHandler(req, res) {
                 if(visibleCores.length === 0) continue;
 
                 message += `\n\n- ${key} (${visibleCores.length}/${slotsInUse[key]}개) -`;
-                markdown += `${isFirstRichSection ? "\n" : "\n\n"}[${key} ${visibleCores.length}/${slotsInUse[key]}]`;
-                isFirstRichSection = false;
+                markdown += `\n\n### ${key} (${visibleCores.length}/${slotsInUse[key]}개)`;
                 for(let singleData of visibleCores) {
                     // 0인 레벨은 표기에서 제외한다
                     let levelText;
@@ -1910,30 +1899,30 @@ async function infoSixHandler(req, res) {
                         levelText = `Lv.${singleData["lev"]}`;
                     }
                     message += `\n[${levelText}] ${truncateText(singleData["name"])}`;
-                    markdown += `\n${levelText.replace("이벤트 Lv.", "이벤트 ").replace("보유 Lv.", "보유 ")}  ${singleData["name"]}`;
+                    markdown += `\n- ${singleData["name"]} — ${levelText}`;
                 }
             }
 
             message += `\n\n[HEXA강화 진척도(공용코어 제외)]\n- 솔 에르다: ${AddComma(usedSols)}개/${AddComma(totalRequiredSols)}개(${solRatio}%)`;
             message += `\n- 조각: ${AddComma(usedCracks)}개/${AddComma(totalRequiredCracks)}개(${crackRatio}%)`;
 
-            markdown += `\n\n[진척도 · 공용 제외]`;
-            markdown += `\n솔 에르다  ${AddComma(usedSols)} / ${AddComma(totalRequiredSols)}  ${richPercent(solRatio)}`;
-            markdown += `\n조각  ${AddComma(usedCracks)} / ${AddComma(totalRequiredCracks)}  ${richPercent(crackRatio)}`;
+            markdown += `\n\n### 진척도 (공용코어 제외)`;
+            markdown += `\n- 솔 에르다: ${AddComma(usedSols)} / ${AddComma(totalRequiredSols)} (${solRatio}%)`;
+            markdown += `\n- 조각: ${AddComma(usedCracks)} / ${AddComma(totalRequiredCracks)} (${crackRatio}%)`;
 
             if (hasVisiblePublicCore) {
                 message += `\n\n[HEXA강화 진척도(공용코어)]\n- 솔 에르다: ${AddComma(usedSolsForPublic)}개/${AddComma(totalRequiredSolsForPublic)}개(${solPublicRatio}%)`;
                 message += `\n- 조각: ${AddComma(usedCracksForPublic)}개/${AddComma(totalRequiredCracksForPublic)}개(${crackPublicRatio}%)`;
 
-                markdown += `\n\n[진척도 · 공용]`;
-                markdown += `\n솔 에르다  ${AddComma(usedSolsForPublic)} / ${AddComma(totalRequiredSolsForPublic)}  ${richPercent(solPublicRatio)}`;
-                markdown += `\n조각  ${AddComma(usedCracksForPublic)} / ${AddComma(totalRequiredCracksForPublic)}  ${richPercent(crackPublicRatio)}`;
+                markdown += `\n\n### 진척도 (공용코어)`;
+                markdown += `\n- 솔 에르다: ${AddComma(usedSolsForPublic)} / ${AddComma(totalRequiredSolsForPublic)} (${solPublicRatio}%)`;
+                markdown += `\n- 조각: ${AddComma(usedCracksForPublic)} / ${AddComma(totalRequiredCracksForPublic)} (${crackPublicRatio}%)`;
             }
 
             if (hasEventLevel) {
                 const eventNote = `이벤트 레벨은 무상 지급분이므로 강화 비용 합산에서 제외됩니다.`;
                 message += `\n\n※ ${eventNote}`;
-                markdown += `\n\n※ ${eventNote}`;
+                markdown += `\n\n> ${eventNote}`;
             }
 
             res.status(200).json(json.successWithMarkdown(message, markdown));
@@ -1965,17 +1954,17 @@ app.get("/hexa_cost/:startLev/:endLev", (req, res) => {
     }
 
     let message = `[HEXA 코어 강화 비용]\nLv.${startLev} → Lv.${endLev} (코어 1개 기준)\n※ 솔 에르다 / 조각`;
-    let markdown = `HEXA 코어 강화 비용\nLv.${startLev} → Lv.${endLev} · 코어 1개 기준\n${RICH_RULE}\n솔 에르다 / 조각\n`;
+    let markdown = `## HEXA 코어 강화 비용\n\n**Lv.${startLev} → Lv.${endLev}** (코어 1개 기준)\n`;
 
     for (const tableKey in hexaCoreCost) {
         const cost = calcHexaCoreCostRange(tableKey, startLev, endLev);
         message += `\n\n- ${tableKey} -\n${AddComma(cost.sol)}개 / ${AddComma(cost.crack)}개`;
-        markdown += `\n${tableKey}  ${AddComma(cost.sol)} / ${AddComma(cost.crack)}`;
+        markdown += `\n- ${tableKey} — 솔 에르다 ${AddComma(cost.sol)} / 조각 ${AddComma(cost.crack)}`;
     }
 
     if (startLev === 0) {
         message += `\n\n※ 코어 개방(0→1) 비용이 포함된 금액입니다.\n※ 6차 전직 시 지급되는 첫 번째 스킬 코어는 개방 비용이 들지 않습니다.`;
-        markdown += `\n\n※ 코어 개방(0→1) 비용이 포함된 금액입니다.\n※ 6차 전직 시 지급되는 첫 번째 스킬 코어는 개방 비용이 들지 않습니다.`;
+        markdown += `\n\n> 코어 개방(0→1) 비용이 포함된 금액입니다.\n> 6차 전직 시 지급되는 첫 번째 스킬 코어는 개방 비용이 들지 않습니다.`;
     }
 
     res.status(200).json(json.successWithMarkdown(message, markdown));

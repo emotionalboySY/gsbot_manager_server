@@ -14,5 +14,9 @@
     "pm2": "^6.0.14",
     "puppeteer": "^24.40.0",
     "querystring": "^0.2.1"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "seed": "node seed_bosses.js"
   }
 }

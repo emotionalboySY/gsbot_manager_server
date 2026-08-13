@@ -50,13 +50,13 @@ function success(result) {
 
 // 평문과 마크다운 두 형식을 함께 반환한다. 봇이 방에 따라 골라 쓴다.
 // resultMarkdown 이 없는 응답(실패·안내 등)에서는 봇이 자동으로 평문으로 떨어진다.
-function successWithMarkdown(plain, markdown) {
-    return {
+function successWithMarkdown(plain, markdown, extra) {
+    return Object.assign({
         success: true,
         result: encodeURIComponent(plain),
         resultRaw: plain,
         resultMarkdown: markdown
-    };
+    }, extra || {});
 }
 
 

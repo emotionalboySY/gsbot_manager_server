@@ -1875,7 +1875,9 @@ async function infoSixHandler(req, res) {
             const title = iden.characterTitle(characterName, characterClass);
 
             let message = `[${title}]\n\n[HEXA강화]`;
-            // 마크다운을 렌더링하는 방용 출력. 코어 이름을 줄이지 않는다.
+            // 마크다운을 렌더링하는 방용 출력.
+            // 레벨을 앞에 두고 이름은 평문과 똑같이 자른다 — 모바일 카카오톡에서
+            // 스킬명 하나가 두 줄로 넘어가지 않게 하려는 의도적인 처리다.
             // 표는 렌더링을 지원하지 않는 클라이언트에서 파이프가 그대로 노출되므로 목록을 쓴다.
             let markdown = `## ${title}`;
 
@@ -1902,7 +1904,7 @@ async function infoSixHandler(req, res) {
                         levelText = `Lv.${singleData["lev"]}`;
                     }
                     message += `\n[${levelText}] ${truncateText(singleData["name"])}`;
-                    markdown += `\n- ${singleData["name"]} — ${levelText}`;
+                    markdown += `\n- [${levelText}] ${truncateText(singleData["name"])}`;
                 }
             }
 

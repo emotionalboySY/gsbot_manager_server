@@ -265,18 +265,29 @@ function differenceInDays(date1, date2) {
 /////////////////////////////////////////////////////////
 // 레벨히스토리 조회를 위한 함수들
 
-// 마크다운을 렌더링하는 방(오픈채팅 그룹방)용 출력.
-// 표는 렌더링을 지원하지 않는 클라이언트(맥 카카오톡 등)에서 파이프가 그대로 노출돼
-// 평문보다 나빠지므로 쓰지 않는다. 목록은 렌더링 여부와 무관하게 읽힌다.
+// 마크다운 경로로 나가는 출력.
+//
+// 마크다운 문법은 쓰지 않는다. 렌더링 지원이 클라이언트마다 갈리는데(맥 카카오톡은
+// 미지원) 봇은 수신자의 클라이언트를 알 수 없어서, 안 되는 쪽에서 기호가 그대로
+// 노출된다. 표는 특히 평문보다 나빠진다.
+// 대신 어디서 보든 동일하게 보이는 구분선·정렬로 다듬는다.
+// 이 경로의 실질적 이점은 코어/캐릭터 이름을 자르지 않는 것이다.
+const RULE = "─────────────";
+// 날짜에서 연도를 떼어 낸다. 같은 해 안의 연속된 날짜라 연도가 반복되면 읽기만 나빠진다.
+function shortDate(dateString) {
+    const parts = String(dateString).split('-');
+    return parts.length === 3 ? `${parts[1]}.${parts[2]}` : dateString;
+}
+
 function expHistoryMarkdown(characterName, rows, levUpText) {
-    let md = `## ${characterName}의 경험치 히스토리\n`;
+    let out = `${characterName} 경험치 히스토리\n${RULE}`;
     for (const row of rows) {
-        md += row.note
-            ? `\n- ${row.date} — ${row.note}`
-            : `\n- ${row.date} — Lv.${row.lev} / ${row.exp}%`;
+        out += row.note
+            ? `\n${shortDate(row.date)}  ${row.note}`
+            : `\n${shortDate(row.date)}  Lv.${row.lev} · ${row.exp}%`;
     }
-    md += `\n\n**예상 레벨업 날짜:** ${levUpText}`;
-    return md;
+    out += `\n${RULE}\n예상 레벨업  ${levUpText}`;
+    return out;
 }
 
 function levHistoryRows(levHistory) {
@@ -290,11 +301,11 @@ function levHistoryRows(levHistory) {
 }
 
 function levelHistoryMarkdown(characterName, levHistory) {
-    let md = `## ${characterName}의 레벨 히스토리\n`;
+    let out = `${characterName} 레벨 히스토리\n${RULE}`;
     for (const row of levHistoryRows(levHistory)) {
-        md += `\n- ${row.date} — Lv.${row.lev}`;
+        out += `\nLv.${row.lev}  ${row.date}`;
     }
-    return md;
+    return out;
 }
 
 function levelHistoryResponse(characterName, levHistory) {

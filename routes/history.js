@@ -18,6 +18,58 @@ const API_START_DATE = new Date('2023-12-21'); // API 서비스 시작일
 // 한 건이 무한정 매달리면 요청 전체가 봇의 재시도 예산(10초)을 넘긴다.
 const NEXON_TIMEOUT_MS = 3000;
 
+// 콜드 스캔은 병렬로 돌리되 한꺼번에 몰리지 않게 동시 호출 수를 묶는다.
+// 넥슨의 호출량 초과(OPENAPI00007)를 피하면서 왕복 횟수를 줄이는 것이 목적이다.
+const NEXON_CONCURRENCY = 10;
+
+// 콜드 스캔의 격자 탐침 개수. 레벨은 시간에 대해 단조증가하므로, API 서비스
+// 시작일부터 오늘까지를 이만큼으로 나눠 한 번에 조회하면 "어느 구간에 레벨업이
+// 몇 번 있었는지" 가 정해진다. 그 뒤 필요한 구간만 이진탐색으로 좁힌다.
+const PROBE_COUNT = 32;
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+function startOfDay(date) {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    return d;
+}
+
+let nexonRunning = 0;
+const nexonWaiters = [];
+
+async function acquireNexonSlot() {
+    while (nexonRunning >= NEXON_CONCURRENCY) {
+        await new Promise((resolve) => nexonWaiters.push(resolve));
+    }
+    nexonRunning++;
+}
+
+function releaseNexonSlot() {
+    nexonRunning--;
+    const next = nexonWaiters.shift();
+    if (next) next();
+}
+
+/**
+ * 같은 캐릭터의 스캔이 동시에 두 번 돌지 않게 한다.
+ *
+ * 봇은 1.5초에 응답을 끊고 동기로 한 번 더 온다. 예전엔 그 재시도가 전체 스캔을
+ * 처음부터 새로 시작해 넥슨 호출이 두 배가 됐고, 늦게 끝난 쪽이 characterName
+ * 유니크 인덱스에 부딪혀 E11000 원문이 사용자에게 그대로 나갔다(실측 재현).
+ * 진행 중인 작업이 있으면 그 결과를 같이 기다린다.
+ */
+const inFlightScans = new Map();
+
+function once(key, fn) {
+    const running = inFlightScans.get(key);
+    if (running) return running;
+
+    const promise = Promise.resolve().then(fn).finally(() => inFlightScans.delete(key));
+    inFlightScans.set(key, promise);
+    return promise;
+}
+
 router.get('/exp', async (req, res) => {
     const url = openAPIBaseUrl + "/character/basic";
     let { chatRoomName, talkProfileName, characterName, days } = req.query;
@@ -166,11 +218,6 @@ router.get('/level', async (req, res) => {
     console.log(`${time.getNowDateTime()} - 레벨히스토리(${characterName}, limit=${limitNum === Infinity ? 'all' : limitNum})`);
 
     try {
-        let levHistory = [];
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        // ocid 조회
         const ocid = await iden.getOcid(characterName);
         if (ocid == null) {
             return res.status(200).json(json.noOcid(characterName));
@@ -178,103 +225,99 @@ router.get('/level', async (req, res) => {
 
         const characterClass = await iden.getCharacterClass(ocid);
 
-        // 1. 기존 데이터 있는지 조회
-        let characterHistory = await findLevHistoryatDB(characterName);
+        // 스캔은 캐릭터당 하나만 돈다. 봇의 재시도가 같이 들어와도 새 스캔을
+        // 시작하지 않고 진행 중인 것의 결과를 함께 받는다.
+        const levHistory = await once(characterName, () => resolveLevHistory(characterName, ocid));
 
-        if (!characterHistory) {
-            // 2. DB에 없으면 전체 조회 후 저장
-            console.log(`DB에 데이터 없음 - 전체 조회 시작`);
-            const fullHistory = await getLast10LevelUps(ocid);
-
-            characterHistory = new CharacterHistory({
-                characterName,
-                levHistory: fullHistory.map(item => ({
-                    lev: item.level,
-                    date: new Date(item.date + 'T00:00:00.000Z'),
-                })),
-                updatedDate: today
-            });
-
-            await characterHistory.save();
-            console.log('DB에 저장 완료');
-
-            return res.status(200).json(levelHistoryResponse(characterName, characterClass, sliceHistory(characterHistory.levHistory), asSection));
-        }
-
-        // 3. DB에 있지만 levHistory가 비어 있는 경우 처리
-        if(!characterHistory.levHistory || characterHistory.levHistory.length === 0) {
-            console.log(`levHistory 비어 있음 - 전체 조회 시작`);
-            const fullHistory = await getLast10LevelUps(ocid);
-
-            characterHistory.levHistory = fullHistory.map(item => ({
-                lev: item.level,
-                date: new Date(item.date + 'T00:00:00.000Z'),
-            }));
-            characterHistory.updatedDate = today;
-
-            await characterHistory.save();
-            console.log('levHistory 업데이트 완료');
-
-            return res.status(200).json(levelHistoryResponse(characterName, characterClass, sliceHistory(characterHistory.levHistory), asSection));
-        }
-
-        const updatedDate = new Date(characterHistory.updatedDate);
-        updatedDate.setHours(0, 0, 0, 0);
-
-        const daysDiff = differenceInDays(updatedDate, today);
-
-        if (daysDiff === 0) {
-            console.log('오늘 이미 체크함 - 캐시 반환');
-            return res.status(200).json(levelHistoryResponse(characterName, characterClass, sliceHistory(characterHistory.levHistory), asSection));
-        }
-
-        const todayData = await callCharacterAPI(ocid);
-        const curLev = todayData.data.character_level;
-        const lastLev = characterHistory.levHistory[0]?.lev || 0;
-
-        if (curLev === lastLev) {
-            console.log(`레벨 변화 없음 - updatedDate만 업데이트`);
-            characterHistory.updatedDate = today;
-            await characterHistory.save();
-
-            return res.status(200).json(levelHistoryResponse(characterName, characterClass, sliceHistory(characterHistory.levHistory), asSection));
-        }
-
-        console.log(`레벨 변화 감지: ${lastLev} -> ${curLev}`);
-
-        const newLevelUps = await findAllLevelUpsInRange(updatedDate, today, lastLev, curLev, ocid);
-
-        const newHistoryItems = newLevelUps.reverse().map(item => ({
-            lev: item.level,
-            date: new Date(item.date + 'T00:00:00.000Z')
-        }));
-
-        characterHistory.levHistory = [
-            ...newHistoryItems,
-            ...characterHistory.levHistory
-        ];
-
-        const uniqueHistory = Array.from(
-            new Map(
-                characterHistory.levHistory.map(item => [
-                    `${item.date.toISOString().split('T')[0]}-${item.lev}`,
-                    item
-                ])
-            ).values()
-        );
-
-        characterHistory.levHistory = uniqueHistory;
-        characterHistory.updatedDate = today;
-
-        await characterHistory.save();
-        console.log('증분 업데이트 완료');
-
-        return res.status(200).json(levelHistoryResponse(characterName, characterClass, sliceHistory(characterHistory.levHistory), asSection));
+        return res.status(200).json(levelHistoryResponse(characterName, characterClass, sliceHistory(levHistory), asSection));
     } catch (error) {
         console.error('레벨 히스토리 조회 중 오류:', error);
         return res.status(200).json(json.failure(error.message || '레벨 히스토리를 불러오는데 실패했습니다.'));
     }
 });
+
+/**
+ * DB 를 읽고, 없거나 오늘 아직 안 봤으면 채운 뒤 levHistory 를 돌려준다.
+ * 캐릭터당 한 번만 돌도록 once() 를 거쳐 호출한다.
+ */
+async function resolveLevHistory(characterName, ocid) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const characterHistory = await findLevHistoryatDB(characterName);
+
+    // DB 에 없거나, 있어도 이력이 비어 있으면 전체 조회한다.
+    if (!characterHistory || !characterHistory.levHistory || characterHistory.levHistory.length === 0) {
+        console.log('DB에 데이터 없음 - 전체 조회 시작');
+        const fullHistory = await getLast10LevelUps(ocid);
+
+        // new + save 는 같은 캐릭터가 이미 있으면 characterName 유니크 인덱스에
+        // 걸려 E11000 을 낸다. upsert 로 두면 경합이 새어나가도 조용히 덮어쓴다.
+        const saved = await CharacterHistory.findOneAndUpdate(
+            { characterName },
+            {
+                characterName,
+                levHistory: fullHistory.map((item) => ({
+                    lev: item.level,
+                    date: new Date(item.date + 'T00:00:00.000Z')
+                })),
+                updatedDate: today
+            },
+            { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
+
+        console.log('DB에 저장 완료');
+        return saved.levHistory;
+    }
+
+    const updatedDate = new Date(characterHistory.updatedDate);
+    updatedDate.setHours(0, 0, 0, 0);
+
+    if (differenceInDays(updatedDate, today) === 0) {
+        console.log('오늘 이미 체크함 - 캐시 반환');
+        return characterHistory.levHistory;
+    }
+
+    const todayData = await callCharacterAPI(ocid);
+    const curLev = todayData.data.character_level;
+    const lastLev = characterHistory.levHistory[0]?.lev || 0;
+
+    if (curLev === lastLev) {
+        console.log('레벨 변화 없음 - updatedDate만 업데이트');
+        characterHistory.updatedDate = today;
+        await characterHistory.save();
+        return characterHistory.levHistory;
+    }
+
+    console.log(`레벨 변화 감지: ${lastLev} -> ${curLev}`);
+
+    // findLevelUpsInRange 는 최신순으로 돌려준다. levHistory 도 최신순이라 그대로 앞에 붙인다.
+    const newLevelUps = await findLevelUpsInRange(
+        updatedDate, today, lastLev, curLev, makeLevelReader(ocid), curLev - lastLev
+    );
+
+    const newHistoryItems = newLevelUps.map((item) => ({
+        lev: item.level,
+        date: new Date(item.date + 'T00:00:00.000Z')
+    }));
+
+    const merged = [...newHistoryItems, ...characterHistory.levHistory];
+
+    characterHistory.levHistory = Array.from(
+        new Map(
+            merged.map((item) => [
+                `${item.date.toISOString().split('T')[0]}-${item.lev}`,
+                item
+            ])
+        ).values()
+    );
+    characterHistory.updatedDate = today;
+
+    await characterHistory.save();
+    console.log('증분 업데이트 완료');
+
+    return characterHistory.levHistory;
+}
 
 function differenceInDays(date1, date2) {
     return Math.floor((date2 - date1) / (1000 * 60 * 60 * 24));
@@ -397,6 +440,7 @@ async function callCharacterAPI(ocid, date = null) {
 
     let response;
 
+    await acquireNexonSlot();
     try {
         response = await axios(config);
     } catch (e) {
@@ -405,97 +449,165 @@ async function callCharacterAPI(ocid, date = null) {
         // todayData.data.character_level 에서 터졌다. 제대로 남기고 그대로 올려보낸다.
         console.error(`캐릭터 조회 실패(ocid=${ocid}, date=${date || '오늘'}):`, e.response ? e.response.data : e.message);
         throw e;
+    } finally {
+        releaseNexonSlot();
     }
     return response;
 }
 
-async function getLast10LevelUps(ocid) {
-    const levelUps = [];
-    let curDate = new Date();
-    curDate.setHours(0, 0, 0, 0);
-    let apiCallCount = 0;
+/**
+ * 날짜 -> 레벨 조회기. 한 번의 스캔 안에서 같은 날짜를 두 번 묻지 않는다.
+ * 격자 탐침이 이미 본 날짜를 이진탐색이 다시 묻는 일이 잦아 캐시가 크게 듣는다.
+ * 프라미스를 담아두므로 동시에 같은 날짜를 물어도 요청은 한 번만 나간다.
+ */
+function makeLevelReader(ocid) {
+    const cache = new Map();
 
-    // 현재 레벨 확인
-    const current = await callCharacterAPI(ocid);
-    apiCallCount++;
-    let curLev = current.data.character_level;
+    // 이 스캔이 실제로 넥슨을 몇 번 쳤는지. 전역 카운터로 재면 동시에 도는 다른
+    // 캐릭터의 호출까지 섞여 들어온다(그렇게 재다가 4배로 잘못 읽었다).
+    readLevel.fetches = 0;
 
-    // 뒤로 점프하면서 레벨업 지점 찾기
-    let jumpDays = 1;
-
-    while(levelUps.length < 10 && curDate > API_START_DATE) {
-        // 1. 점프하면서 레벨이 바뀐 구간 찾기
-        let testDate = new Date(curDate);
-        testDate.setDate(testDate.getDate() - jumpDays);
-
-        const test = await callCharacterAPI(ocid, time.getDateStringForAPI(testDate));
-        apiCallCount++;
-
-        if (test.data.character_level < curLev) {
-            // console.log(`현재 탐색 중인 날짜(${time.getDateStringForAPI(testDate)}의 레벨이 현재 레벨 보다 낮음`);
-            // console.log(`start: ${time.getDateStringForAPI(testDate)}\nend: ${time.getDateStringForAPI(curDate)}\ncurLev: ${curLev}로 이진탐색 시작`);
-            const foundLevelUps = await findAllLevelUpsInRange(
-                testDate,
-                curDate,
-                test.data.character_level,
-                curLev,
-                ocid
+    function readLevel(date) {
+        const key = date === null ? '' : time.getDateStringForAPI(date);
+        if (!cache.has(key)) {
+            readLevel.fetches++;
+            cache.set(
+                key,
+                callCharacterAPI(ocid, date === null ? null : key)
+                    .then((response) => Number(response.data.character_level) || 0)
             );
+        }
+        return cache.get(key);
+    }
 
-            for (const lu of foundLevelUps.reverse()) {
-                if (levelUps.length >= 10) break;
-                levelUps.push(lu);
-            }
+    return readLevel;
+}
 
-            if(levelUps.length >= 10) break;
+/**
+ * 최근 레벨업 이력을 찾는다. DB 에 아무것도 없을 때만 도는 콜드 경로다.
+ *
+ * 예전에는 오늘부터 하루·이틀·나흘… 뒤로 점프하며 레벨이 바뀐 구간을 찾고 그때마다
+ * 이진탐색을 돌렸다. 전부 순차라 넥슨을 50여 회 줄줄이 치게 되고, 한 번에 150ms 씩만
+ * 잡아도 9초가 걸렸다(EC2 실측 8.9~9.8초). 봇의 재시도 예산이 10초라 첫 조회는
+ * 거의 매번 타임아웃이었다.
+ *
+ * 레벨은 시간에 대해 단조증가한다. 그래서 서비스 시작일부터 오늘까지를 PROBE_COUNT
+ * 개 지점으로 나눠 한 번에 병렬 조회하면, 어느 구간에 레벨업이 몇 번 있었는지가 그
+ * 자체로 정해진다. 그 뒤 필요한 구간만 이진탐색으로 좁히는데 구간끼리는 서로 독립이라
+ * 이것도 동시에 돌린다.
+ */
+async function getLast10LevelUps(ocid, want = 10) {
+    const readLevel = makeLevelReader(ocid);
 
-            // console.log(levelUpDate);
-            // console.log(curLev);
+    const today = startOfDay(new Date());
+    const spanDays = differenceInDays(API_START_DATE, today);
+    if (spanDays <= 1) return [];
 
+    // 1) 격자 지점의 레벨을 한꺼번에 조회한다.
+    const probeDates = [];
+    for (let i = 0; i < PROBE_COUNT; i++) {
+        const d = new Date(API_START_DATE);
+        d.setDate(d.getDate() + Math.round((spanDays * i) / PROBE_COUNT));
+        probeDates.push(startOfDay(d));
+    }
+    probeDates.push(today);
 
-            curDate = new Date(testDate);
-            curLev = test.data.character_level;
-            jumpDays = 1;
-        } else {
-            curDate = testDate;
-            jumpDays *= 2;
+    const lastIndex = probeDates.length - 1;
+    const probeLevels = await Promise.all(probeDates.map((d, i) =>
+        // 마지막 지점은 오늘이라 date 파라미터 없이 현재 정보를 쓴다(전일 데이터
+        // 갱신 중이면 오늘 날짜 조회가 비어 오기 때문).
+        readLevel(i === lastIndex ? null : d)
+    ));
+
+    // 2) 레벨이 오른 구간만, 최신 것부터 후보로 모은다.
+    const candidates = [];
+    for (let i = lastIndex; i > 0; i--) {
+        if (probeLevels[i] > probeLevels[i - 1]) {
+            candidates.push({
+                start: probeDates[i - 1],
+                end: probeDates[i],
+                startLev: probeLevels[i - 1],
+                endLev: probeLevels[i]
+            });
         }
     }
 
-    console.log(`Total API calls: ${apiCallCount}`);
+    // 3) 필요한 만큼만 좁힌다. 같은 날 여러 번 오른 레벨업은 한 건으로 접히므로
+    //    구간이 약속한 수보다 적게 나올 수 있다. 모자라면 다음 구간을 더 본다.
+    const levelUps = [];
+    let cursor = 0;
+
+    while (levelUps.length < want && cursor < candidates.length) {
+        const batch = [];
+        let expected = 0;
+
+        while (cursor < candidates.length && expected < want - levelUps.length) {
+            const candidate = candidates[cursor++];
+            batch.push(candidate);
+            expected += candidate.endLev - candidate.startLev;
+        }
+
+        const found = await Promise.all(batch.map((c) =>
+            findLevelUpsInRange(c.start, c.end, c.startLev, c.endLev, readLevel, want - levelUps.length)
+        ));
+
+        for (const inRange of found) {
+            for (const levelUp of inRange) {
+                if (levelUps.length >= want) break;
+                levelUps.push(levelUp);
+            }
+            if (levelUps.length >= want) break;
+        }
+    }
+
+    console.log(`Total API calls: ${readLevel.fetches}`);
     return levelUps;
 }
 
-async function findAllLevelUpsInRange(start, end, startLev, endLev, ocid) {
-    const result = [];
+/**
+ * 구간 안의 레벨업 날짜를 최신 것부터 최대 want 개 돌려준다.
+ *
+ * 하루 단위로 자른다. 예전에는 (start+end)/2 를 그대로 중간값으로 썼는데, 간격이
+ * 홀수 일이면 정오가 섞이고 differenceInDays 의 floor 와 맞물려 아직 이틀 폭인
+ * 구간에서 탐색이 끝나버렸다. 그러면 실제보다 하루 뒤가 답으로 나온다(넥슨에 직접
+ * 물어 확인). 자정으로 맞추면 남은 폭이 정확히 하루일 때만 끝나므로 end 가 그
+ * 레벨에 처음 도달한 날이 된다.
+ *
+ * want 를 받는 이유: 구간에 레벨업이 want 보다 훨씬 많이 들어 있을 수 있다(신규
+ * 캐릭터가 한 달 만에 200 레벨을 올린 경우 등). 그때 전부 열거하면 쓰지도 않을
+ * 날짜를 찾느라 호출이 폭증한다(실측 최대 247회). 필요한 수보다 많이 든 구간은
+ * 새쪽 절반부터 순서대로 파고들어 want 개를 채우면 멈춘다. 반대로 구간이 want
+ * 이하로 작으면 어차피 다 봐야 하므로 양쪽을 동시에 돌린다.
+ */
+async function findLevelUpsInRange(start, end, startLev, endLev, readLevel, want) {
+    if (want <= 0 || endLev <= startLev) return [];
 
-    if (differenceInDays(start, end) <= 1) {
-        const endDateStr = time.getDateStringForAPI(end);
-        result.push({
-            date: endDateStr,
-            level: endLev
-        });
-        return result;
+    const startDay = startOfDay(start);
+    const endDay = startOfDay(end);
+    const gapDays = Math.round((endDay.getTime() - startDay.getTime()) / MS_PER_DAY);
+
+    if (gapDays <= 1) {
+        return [{ date: time.getDateStringForAPI(endDay), level: endLev }];
     }
 
-    const midDate = new Date((start.getTime() + end.getTime()) / 2);
-    const midData = await callCharacterAPI(ocid, time.getDateStringForAPI(midDate));
+    const midDate = new Date(startDay.getTime() + Math.floor(gapDays / 2) * MS_PER_DAY);
+    const midLev = await readLevel(midDate);
 
-    if(midData.data.character_level > startLev) {
-        const leftResults = await findAllLevelUpsInRange(
-            start, midDate, startLev, midData.data.character_level, ocid
-        );
-        result.push(...leftResults);
+    if (endLev - startLev <= want) {
+        // 다 봐야 하는 구간이면 좌·우가 서로 기다릴 이유가 없다.
+        const [newer, older] = await Promise.all([
+            findLevelUpsInRange(midDate, end, midLev, endLev, readLevel, want),
+            findLevelUpsInRange(start, midDate, startLev, midLev, readLevel, want)
+        ]);
+        return [...newer, ...older];
     }
 
-    if(endLev > midData.data.character_level) {
-        const rightResults = await findAllLevelUpsInRange(
-            midDate, end, midData.data.character_level, endLev, ocid
-        );
-        result.push(...rightResults);
-    }
+    // 새쪽(오른쪽)이 먼저다. 채워지면 옛쪽은 보지 않는다.
+    const newer = await findLevelUpsInRange(midDate, end, midLev, endLev, readLevel, want);
+    if (newer.length >= want) return newer;
 
-    return result;
+    const older = await findLevelUpsInRange(start, midDate, startLev, midLev, readLevel, want - newer.length);
+    return [...newer, ...older];
 }
 
 // 끝

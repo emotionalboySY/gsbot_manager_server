@@ -40,9 +40,10 @@ const weeklyMessageSchema = new mongoose.Schema({
 });
 
 // 업데이트 시 updatedAt 자동 갱신
-weeklyMessageSchema.pre('save', function(next) {
+// Mongoose 9 부터 콜백(next) 방식 미들웨어를 받지 않는다. next 를 부르면
+// "next is not a function" 으로 save() 가 통째로 실패한다(생성이 전부 400 이었다).
+weeklyMessageSchema.pre('save', function () {
     this.updatedAt = Date.now();
-    next();
 });
 
 // JSON 변환 시 한국 시간으로 변환

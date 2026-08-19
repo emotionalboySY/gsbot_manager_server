@@ -14,6 +14,10 @@ const openAPIBaseUrl = "https://open.api.nexon.com/maplestory/v1";
 
 const API_START_DATE = new Date('2023-12-21'); // API 서비스 시작일
 
+// 넥슨 OpenAPI 한 번 호출의 상한. 이 라우트는 조회 일수만큼 순차 호출하므로
+// 한 건이 무한정 매달리면 요청 전체가 봇의 재시도 예산(10초)을 넘긴다.
+const NEXON_TIMEOUT_MS = 3000;
+
 router.get('/exp', async (req, res) => {
     const url = openAPIBaseUrl + "/character/basic";
     let { chatRoomName, talkProfileName, characterName, days } = req.query;
@@ -65,7 +69,8 @@ router.get('/exp', async (req, res) => {
                         headers: {
                             'accept': 'application/json',
                             'x-nxopen-api-key': process.env.API_KEY
-                        }
+                        },
+                        timeout: NEXON_TIMEOUT_MS
                     };
                 } else {
                     config = {
@@ -75,6 +80,7 @@ router.get('/exp', async (req, res) => {
                             'accept': 'application/json',
                             'x-nxopen-api-key': process.env.API_KEY
                         },
+                        timeout: NEXON_TIMEOUT_MS
                     };
                 }
                 if (today.getDay() - date.getDay() == 1 && (today.getHours() >= 0 && today.getHours() < 2)) {
@@ -122,9 +128,11 @@ router.get('/exp', async (req, res) => {
                 { characterName, characterClass, title }
             ));
         } catch (e) {
-            console.error(e.response.data.error);
-            let message = `name: ${e.response.data.error.name}\nmessage: ${e.response.data.error.message}`;
-            return res.status(200).json(json.failure(message));
+            // 타임아웃·연결 실패 같은 네트워크 레벨 에러에는 e.response 가 없다.
+            // 예전엔 여기서 e.response.data 를 그냥 읽어 catch 자체가 TypeError 를
+            // 내고 진짜 원인이 지워졌다. json.nexonAPIError 가 두 경우를 다 다룬다.
+            console.error(`경험치 히스토리 조회 실패(${characterName}):`, e.response ? e.response.data : e.message);
+            return res.status(200).json(json.nexonAPIError(e));
         }
     }
 });
@@ -383,7 +391,8 @@ async function callCharacterAPI(ocid, date = null) {
         headers: {
             'accept': 'application/json',
             'x-nxopen-api-key': process.env.API_KEY
-        }
+        },
+        timeout: NEXON_TIMEOUT_MS
     };
 
     let response;
@@ -391,7 +400,11 @@ async function callCharacterAPI(ocid, date = null) {
     try {
         response = await axios(config);
     } catch (e) {
-        console.error(e.data.error);
+        // axios 에러에 e.data 는 없다(e.response.data 다). 예전엔 이 줄이 TypeError 를
+        // 내면서 진짜 원인을 지웠고, 안 터졌더라도 undefined 를 돌려줘 호출부가
+        // todayData.data.character_level 에서 터졌다. 제대로 남기고 그대로 올려보낸다.
+        console.error(`캐릭터 조회 실패(ocid=${ocid}, date=${date || '오늘'}):`, e.response ? e.response.data : e.message);
+        throw e;
     }
     return response;
 }

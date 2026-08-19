@@ -22,6 +22,12 @@ const bossMessageUtil = require('./utils/boss_message');
 var moment = require('moment');
 moment.tz.setDefault("Asia/Seoul");
 
+// axios 기본 타임아웃은 0(무제한)이다. 업스트림(넥슨 OpenAPI·홈페이지)이 응답을
+// 물고 있으면 요청 핸들러가 상한 없이 매달리고, 봇 쪽에는 원인을 알 수 없는
+// java.net.SocketTimeoutException 으로만 보인다. 개별 호출에 timeout 을 적어 둔
+// 곳은 그 값이 이긴다(utils/cash_probability.js 등).
+axios.defaults.timeout = 8000;
+
 const app = express();
 
 // express 미들웨어 추가
@@ -30,6 +36,18 @@ app.use(express.urlencoded({ extended: true }));
 
 process.env.TZ='Asia/Seoul';
 const server = http.createServer(app);
+
+// Node 기본값은 keepAliveTimeout 5초라 서버가 5초 만에 유휴 커넥션을 닫는다.
+// 그런데 클라이언트(안드로이드 OkHttp — 봇의 Http.request 와 JSoup 이 모두 이걸
+// 탄다)는 응답의 "Keep-Alive: timeout=5" 를 따르지 않고 유휴 커넥션을 몇 분씩
+// 풀에 들고 있다가 재사용한다. 서버가 이미 닫은 소켓에 요청을 쓰면 그 요청은
+// 사라지고 오지 않을 응답을 기다리게 되는데, 봇에는 이것이
+// java.net.SocketTimeoutException: timeout 으로 보인다(2026-08-19 실측 재현:
+// 유휴 4초 재사용은 성공, 6초부터 요청 유실).
+// 그래서 클라이언트 재사용 창보다 길게 잡아 서버가 먼저 끊지 않게 한다.
+// headersTimeout 은 keepAliveTimeout 보다 커야 한다.
+server.keepAliveTimeout = 65000;
+server.headersTimeout = 66000;
 
 app.use(cors());
 

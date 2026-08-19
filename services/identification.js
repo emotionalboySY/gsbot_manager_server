@@ -5,6 +5,10 @@ require('dotenv').config();
 
 const openAPIBaseUrl = "https://open.api.nexon.com/maplestory/v1";
 
+// 넥슨 OpenAPI 한 번 호출의 상한. 실측 응답은 50ms 안팎이라 넉넉하다.
+// 상한이 없으면 업스트림이 물릴 때 요청 전체가 상한 없이 매달린다.
+const NEXON_TIMEOUT_MS = 3000;
+
 const availableWorldName = [
     "스카니아",
     "베라",
@@ -38,6 +42,7 @@ async function getOcid(characterName) {
                 'accept': 'application/json',
                 'x-nxopen-api-key': process.env.API_KEY
             },
+            timeout: NEXON_TIMEOUT_MS
         };
 
         let response = await axios(config);
@@ -63,6 +68,7 @@ async function getOGuildId(worldName, guildName) {
                     'accept': 'application/json',
                     'x-nxopen-api-key': process.env.API_KEY
                 },
+                timeout: NEXON_TIMEOUT_MS
             };
 
             let response = await axios(config);
@@ -87,6 +93,7 @@ async function getCharacterClass(ocid) {
                 'accept': 'application/json',
                 'x-nxopen-api-key': process.env.API_KEY
             },
+            timeout: NEXON_TIMEOUT_MS
         };
 
         const response = await axios(config);

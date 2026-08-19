@@ -266,9 +266,9 @@ router.get('/guild/:worldName/:guildName', async (req, res) => {
 
             return res.status(200).json(json.success(message));
         } catch (e) {
-            console.error(e.response.data.error);
-            let message = `name: ${e.response.data.error.name}\nmessage: ${e.response.data.error.message}`;
-            return res.status(200).json(json.failure(message));
+            // 네트워크 레벨 에러에는 e.response 가 없어 예전엔 catch 자체가 터졌다.
+            console.error('길드 멤버 랭킹 조회 실패:', e.response ? e.response.data : e.message);
+            return res.status(200).json(json.nexonAPIError(e));
         }
     }
 });

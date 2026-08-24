@@ -178,6 +178,39 @@ function entriesToReach(farm, startLevel, startRatio, targetLevel) {
     return { reachable: true, entries, blockedAt: null, reason: null };
 }
 
+/**
+ * 시작점에서 끝점까지 얼마나 올랐는지를 레벨 눈금으로 환산한다.
+ *
+ * 경험치 바를 100 눈금으로 보고 시작 지점부터 끝 지점까지의 칸 수를 센다.
+ * Lv.250 50% → Lv.252 44.207% 이면 (100-50) + 100 + 44.207 = 194.207,
+ * 즉 1레벨 94.21% 다.
+ *
+ * 레벨마다 요구 경험치가 다르고 5레벨 경계에서 두 배로 뛰므로 "1.94 레벨치
+ * 경험치" 라는 뜻은 아니다. 게임이 레벨과 %로 보여주니 체감과 맞을 뿐이고,
+ * 실제 양은 gainedExp 가 답한다.
+ */
+function levelGain(result) {
+    const levels = result.endLevel - result.startLevel;
+    const total = levels === 0
+        ? result.endRatio - result.startRatio
+        : (100 - result.startRatio) + (levels - 1) * 100 + result.endRatio;
+
+    return {
+        // 눈금으로 한 레벨을 못 채웠으면 레벨 부분을 빼고 % 만 쓴다.
+        // Lv.259 90% → Lv.260 0.392% 는 레벨이 오르긴 했어도 진행은
+        // 10.39% 뿐이라 "+0레벨 10.39%" 로 적으면 오히려 읽기 나쁘다.
+        levels: Math.floor(total / 100),
+        ratio: total >= 100 ? total % 100 : total
+    };
+}
+
+/** levelGain 을 사람이 읽는 한 줄로. */
+function levelGainText(result) {
+    const gain = levelGain(result);
+    const ratio = gain.ratio.toFixed(2);
+    return gain.levels > 0 ? `+${gain.levels}레벨 ${ratio}%` : `+${ratio}%`;
+}
+
 module.exports = {
     MAX_LEVEL,
     MAX_ENTRIES,
@@ -186,5 +219,7 @@ module.exports = {
     singleEntry,
     compareAt,
     simulate,
-    entriesToReach
+    entriesToReach,
+    levelGain,
+    levelGainText
 };

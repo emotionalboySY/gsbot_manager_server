@@ -16,7 +16,7 @@ function formatDate(date) {
 // 봇은 저장 성공 여부와 무관하게 관리자에게 내용을 따로 전달하므로,
 // 여기서는 유실 방지를 위한 기록이 목적이다.
 router.post("/suggestion", async (req, res) => {
-    const { chatRoomName, talkProfileName, content } = req.body || {};
+    const { chatRoomName, talkProfileName, content, clientKey } = req.body || {};
 
     const trimmed = typeof content === 'string' ? content.trim() : '';
     if (!trimmed) {
@@ -28,15 +28,27 @@ router.post("/suggestion", async (req, res) => {
 
     console.log(`${time.getNowDateTime()} - 건의(${chatRoomName} / ${talkProfileName})`);
 
+    const key = typeof clientKey === 'string' ? clientKey.trim() : '';
+
     try {
-        await new Suggestion({
-            chatRoomName,
-            talkProfileName,
-            content: trimmed
-        }).save();
+        // 키가 있으면 그대로 싣는다. 중복은 clientKey 의 unique 인덱스가
+        // 막고 아래 catch 가 E11000 을 성공으로 되돌린다. findOneAndUpdate 의
+        // upsert 로도 되지만 신규/기존 판별에 쓰는 rawResult 가 Mongoose 9 에서
+        // 빠져 버전을 타므로, 어느 버전에서나 같게 도는 이쪽을 쓴다.
+        const doc = { chatRoomName, talkProfileName, content: trimmed };
+        if (key) doc.clientKey = key;
+
+        await new Suggestion(doc).save();
 
         return res.status(200).json(json.success("건의가 접수되었습니다. 검토 후 반영하겠습니다. 감사합니다."));
     } catch (e) {
+        // 같은 clientKey 가 다시 들어오면 unique 인덱스가 E11000 으로 막는다.
+        // 그건 이미 저장돼 있다는 뜻이라 실패로 돌려주면 안 된다 — 봇이 또
+        // 재시도하고 사용자는 접수된 건의를 실패로 본다.
+        if (e && e.code === 11000) {
+            console.log(`${time.getNowDateTime()} - 건의 중복 요청 흡수(${key})`);
+            return res.status(200).json(json.success("건의가 접수되었습니다. 검토 후 반영하겠습니다. 감사합니다."));
+        }
         console.error(`건의 저장 실패: ${e.message}`);
         return res.status(200).json(json.failure("건의 접수 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."));
     }

@@ -13,6 +13,7 @@ const intervalMessage = require('./interval_message.js');
 const fcmRouter = require('./fcm.js');
 const probability = require('./probability.js');
 const homepage = require('./home_page_scrapping.js');
+const berry = require('./berry.js');
 
 router.use("/history", history);
 router.use("/main_character", mainCharacter);
@@ -26,5 +27,6 @@ router.use("/intervalMessage", intervalMessage);
 router.use("/fcm", fcmRouter);
 router.use("/probability", probability);
 router.use("/homepage", homepage);
+router.use("/berry", berry);
 
 module.exports = router;

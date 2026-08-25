@@ -38,12 +38,13 @@ router.get('/superial', (req, res) => {
 
 // 스타포스 강화 시뮬레이션
 router.get('/starForce', (req, res) => {
-    const { itemLev, startForce, goalForce, isStarCatch, isEvent, isBreakShield } = req.query;
-    console.log(`${time.getNowDateTime()} - 스타포스시뮬(${itemLev}, ${startForce}, ${goalForce}, ${isStarCatch}, ${isEvent}, ${isBreakShield})`);
+    // isRecovery 는 선택. 안 보내면 기존대로 12성 복구다
+    const { itemLev, startForce, goalForce, isStarCatch, isEvent, isBreakShield, isRecovery } = req.query;
+    console.log(`${time.getNowDateTime()} - 스타포스시뮬(${itemLev}, ${startForce}, ${goalForce}, ${isStarCatch}, ${isEvent}, ${isBreakShield}, ${isRecovery})`);
 
     return reply(
         res,
-        enforcements.starForce(itemLev, startForce, goalForce, isStarCatch, isEvent, isBreakShield),
+        enforcements.starForce(itemLev, startForce, goalForce, isStarCatch, isEvent, isBreakShield, isRecovery),
         present.starForceResult,
         present.starForceFailure
     );

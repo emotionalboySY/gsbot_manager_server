@@ -49,6 +49,64 @@ const STAR_FORCE = {
     breakShield: { fromStar: 15, toStar: 17, extraCostMultiplier: 2 }
 };
 
+/**
+ * 파괴 장비 복구.
+ *
+ * 15성 이상에서 파괴되면 강화 상태를 담은 "장비의 흔적" 이 남고, 동일한 장비에
+ * 전승해 복구한다. 재료로 쓴 장비는 소멸한다. 두 가지 중에 고른다.
+ *
+ *   · 12성 복구   — 재료 1개, 메소 없음
+ *   · 직전 성수 복구 — 아래 표대로 장비와 메소. 22성이 상한이라 23성 이상에서
+ *                      파괴되면 22성까지만 되돌린다
+ *
+ * 메소는 아이템 레벨 세제곱에 비례한다. 공시표가 140/160/200/250제 네 값만
+ * 주는데 넷 다 레벨^3 에 정확히 비례해서(재현 오차 0.5% 이내 — 공시가 유효숫자
+ * 3자리로 반올림된 몫이다) 성수마다 계수 하나면 모든 레벨을 덮는다.
+ * 원본 표는 verify_enforcements.js 가 들고 대조한다.
+ */
+const RESTORE = {
+    minStar: 15,
+    maxStar: 22,
+    // 복구 메소 = coefficient x itemLev^3
+    byStar: {
+        15: { items: 1, coefficient: 54.19 },
+        16: { items: 1, coefficient: 130.81 },
+        17: { items: 1, coefficient: 220.90 },
+        18: { items: 1, coefficient: 502.05 },
+        19: { items: 2, coefficient: 831.67 },
+        20: { items: 2, coefficient: 1467.61 },
+        21: { items: 3, coefficient: 1843.60 },
+        22: { items: 4, coefficient: 3025.17 }
+    },
+    // 재료 하나만 쓰는 쪽
+    twelve: { star: 12, items: 1 }
+};
+
+/** 복구 방법 */
+const RECOVERY = { TWELVE: 0, PREVIOUS: 1 };
+
+/**
+ * 파괴됐을 때 어디로 되돌아가고 무엇을 쓰는가.
+ * @param star 파괴 직전 성수
+ */
+function restoreCost(itemLev, star, recovery) {
+    if (recovery != RECOVERY.PREVIOUS) {
+        return { toStar: RESTORE.twelve.star, items: RESTORE.twelve.items, meso: 0 };
+    }
+    // 22성이 상한. 그보다 위에서 파괴되면 22성까지만 되돌아간다
+    const toStar = Math.min(star, RESTORE.maxStar);
+    const row = RESTORE.byStar[toStar];
+    if (!row) {
+        // 복구표에 없는 성수(15성 미만)에서 파괴될 일은 없지만 방어해 둔다
+        return { toStar: RESTORE.twelve.star, items: RESTORE.twelve.items, meso: 0 };
+    }
+    return {
+        toStar,
+        items: row.items,
+        meso: roundTo(row.coefficient * Math.pow(itemLev, 3), -2)
+    };
+}
+
 const EVENT = { NONE: 0, DISCOUNT: 1, ONE_PLUS_ONE: 2, LESS_BREAK: 3, SHINING: 4 };
 
 function roundTo(num, digits) {
@@ -224,12 +282,17 @@ function superial(startRaw, goalRaw, isStarCatchRaw) {
  * @param isEvent 0 미적용 / 1 상시 30% 할인 / 2 10성까지 1+1 / 3 21성 이하 파괴확률 30% 감소 / 4 샤이닝
  * @param isBreakShield 1 이면 15~18성 구간에서 비용 3배를 내고 파괴를 막는다
  */
-function starForce(itemLevRaw, startForceRaw, goalForceRaw, isStarCatchRaw, isEventRaw, isBreakShieldRaw) {
+/**
+ * @param isRecoveryRaw 0 이면 재료 1개로 12성 복구, 1 이면 파괴 직전 성수로 복구.
+ *                      생략하면 12성 복구다(기존 동작).
+ */
+function starForce(itemLevRaw, startForceRaw, goalForceRaw, isStarCatchRaw, isEventRaw, isBreakShieldRaw, isRecoveryRaw) {
     const itemLev = Number(itemLevRaw);
     const startForce = Number(startForceRaw);
     const isStarCatch = Number(isStarCatchRaw);
     const isEvent = Number(isEventRaw);
     const isBreakShield = Number(isBreakShieldRaw);
+    const isRecovery = isRecoveryRaw === undefined ? RECOVERY.TWELVE : Number(isRecoveryRaw);
     let goalForce = Number(goalForceRaw);
 
     const levelOk = (itemLev >= 138 && itemLev <= 200) || itemLev == 250;
@@ -239,7 +302,8 @@ function starForce(itemLevRaw, startForceRaw, goalForceRaw, isStarCatchRaw, isEv
         Number.isFinite(goalForce) && goalForce >= 0 && goalForce <= STAR_FORCE.maxStar &&
         (isStarCatch === 0 || isStarCatch === 1) &&
         isEvent >= 0 && isEvent <= 4 &&
-        (isBreakShield === 0 || isBreakShield === 1);
+        (isBreakShield === 0 || isBreakShield === 1) &&
+        (isRecovery === RECOVERY.TWELVE || isRecovery === RECOVERY.PREVIOUS);
 
     if (!paramsOk) {
         return fail('badParams', `입력값이 올바르지 않습니다.`);
@@ -261,14 +325,19 @@ function starForce(itemLevRaw, startForceRaw, goalForceRaw, isStarCatchRaw, isEv
             `스타포스 시뮬레이션의 목표 달성 수치는 시작 수치보다 항상 커야 합니다.\n\n다시 시도해 주세요.`);
     }
 
-    // 확률·비용은 성수마다 고정이라 루프 밖에서 한 번만 만든다
+    // 확률·비용·복구는 성수마다 고정이라 루프 밖에서 한 번만 만든다
     const odds = [];
+    const restore = [];
     for (let star = 0; star < goalForce; star++) {
         odds.push(starForceOdds(itemLev, star, isStarCatch, isEvent, isBreakShield));
+        restore.push(restoreCost(itemLev, star, isRecovery));
     }
 
     let curForce = startForce;
     let totalCost = 0;
+    let restoreMeso = 0;
+    // 처음 손에 든 장비 하나. 파괴를 복구할 때마다 재료가 더 들어간다
+    let itemsUsed = 1;
     let successCount = 0, failureCount = 0, brokenCount = 0;
 
     while (curForce < goalForce) {
@@ -283,7 +352,10 @@ function starForce(itemLevRaw, startForceRaw, goalForceRaw, isStarCatchRaw, isEv
             }
             successCount++;
         } else if (Math.random() <= breakOnFail) {
-            curForce = STAR_FORCE.brokenTo;
+            const back = restore[curForce];
+            curForce = back.toStar;
+            restoreMeso += back.meso;
+            itemsUsed += back.items;
             brokenCount++;
         } else {
             failureCount++;
@@ -294,14 +366,20 @@ function starForce(itemLevRaw, startForceRaw, goalForceRaw, isStarCatchRaw, isEv
 
     return {
         ok: true,
-        itemLev, startForce, goalForce, isStarCatch, isEvent, isBreakShield,
+        itemLev, startForce, goalForce, isStarCatch, isEvent, isBreakShield, isRecovery,
         successCount, failureCount, brokenCount,
-        totalCost, isOutofBound
+        // totalCost 는 강화 비용과 복구 메소를 합친 값이다. 12성 복구는 메소가
+        // 들지 않으므로 기존 결과와 같다
+        totalCost: totalCost + restoreMeso,
+        enhanceCost: totalCost,
+        restoreMeso,
+        itemsUsed,
+        isOutofBound
     };
 }
 
 module.exports = {
-    TYRANT, STAR_FORCE, EVENT, COST_TABLE,
-    breakGivenFail, starForceOdds, tyrantOdds,
+    TYRANT, STAR_FORCE, EVENT, COST_TABLE, RESTORE, RECOVERY,
+    breakGivenFail, starForceOdds, tyrantOdds, restoreCost,
     superial, starForce
 };

@@ -5,7 +5,7 @@
  * 계산은 하지 않는다.
  */
 const { addComma } = require('../utils/format.js');
-const { STAR_FORCE } = require('../services/enforcements.js');
+const { STAR_FORCE, RECOVERY } = require('../services/enforcements.js');
 
 // 명령어 사용법은 카카오톡 전용 문구다. 로직단이 아니라 여기 둔다 —
 // 웹에는 슬래시 명령어가 없으므로 그대로 쓸 수 없다.
@@ -69,16 +69,26 @@ function starForceResult(data) {
         content += '(시뮬레이션 목표 강화 수치가 아이템 레벨 제한에 맞지 않아 조정되었습니다.)\n\n';
     }
 
-    return content +
+    const previous = data.isRecovery == RECOVERY.PREVIOUS;
+    let result = content +
         `${data.itemLev}레벨 아이템을\n` +
         `${data.startForce}성부터 ${data.goalForce}성까지 진행\n` +
         `스타캐치 적용 여부: ${appliedLabel(data.isStarCatch)}\n` +
         `이벤트 적용 여부: ${EVENT_LABEL[data.isEvent] || '미적용'}\n` +
-        `파괴방지 적용 여부: ${data.isBreakShield == 1 ? shieldLabel() : '미적용'}\n\n` +
+        `파괴방지 적용 여부: ${data.isBreakShield == 1 ? shieldLabel() : '미적용'}\n` +
+        `파괴 복구 방법: ${previous ? '파괴 직전 성수로 복구' : '12성으로 복구'}\n\n` +
         `성공 횟수: ${data.successCount}회\n` +
         `실패 횟수: ${data.failureCount}회\n` +
-        `파괴 횟수: ${data.brokenCount}회\n\n` +
-        `총 강화 비용: ${addComma(data.totalCost)}메소`;
+        `파괴 횟수: ${data.brokenCount}회\n` +
+        `소모 장비: ${data.itemsUsed}개\n\n`;
+
+    // 12성 복구는 메소가 들지 않아 나눠 적을 것이 없다
+    if (previous && data.restoreMeso > 0) {
+        result +=
+            `강화 비용: ${addComma(data.enhanceCost)}메소\n` +
+            `복구 비용: ${addComma(data.restoreMeso)}메소\n`;
+    }
+    return result + `총 강화 비용: ${addComma(data.totalCost)}메소`;
 }
 
 module.exports = { superialResult, superialFailure, starForceResult, starForceFailure };

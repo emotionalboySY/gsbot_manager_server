@@ -33,8 +33,20 @@ const STAR_FORCE = {
     success:    [95, 90, 85, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30,  30,  30,  15,  15,  15,   30,    15, 15, 10, 10, 10,    7,  5,    3,    1],
     break:      [ 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 2.1, 2.1, 6.8, 6.8, 8.5, 10.5, 12.75, 17, 18, 18, 18, 18.6, 19, 19.4, 19.8],
     maxStar: 29,
-    // 파괴되면 12성으로 떨어진다
-    brokenTo: 12
+    // 재료 하나만 써서 복구하면 12성이 된다
+    brokenTo: 12,
+    /**
+     * 파괴 방지 적용 구간.
+     *
+     * 인게임 안내가 "스타포스 15성, 16성, 17성 장비로 스타포스 강화를 시도할 때"
+     * 이므로 15·16·17 성에서만 걸린다(즉 15→16, 16→17, 17→18 세 번). 18성부터는
+     * 파괴 방지 없이 시도해야 한다.
+     *
+     * 예전에는 toStar 가 18 이었다. "15~18성 구간" 이라는 표현을 성수 15~18 로
+     * 옮기면서 한 칸 밀린 것으로 보인다 — 18성(18→19)에도 파괴 방지가 걸려
+     * 파괴 확률 6.8% 가 통째로 빠져 있었다.
+     */
+    breakShield: { fromStar: 15, toStar: 17, extraCostMultiplier: 2 }
 };
 
 const EVENT = { NONE: 0, DISCOUNT: 1, ONE_PLUS_ONE: 2, LESS_BREAK: 3, SHINING: 4 };
@@ -96,8 +108,9 @@ function starForceOdds(itemLev, star, isStarCatch, isEvent, isBreakShield) {
     // 파괴방지: 비용을 더 내고 파괴 확률을 0 으로 만든다.
     // 추가분은 "할인 전" 비용 기준이라, 할인 이벤트와 겹쳐도 할인가의 3배가
     // 아니라 (할인가 + 할인전가 x 2) 가 된다.
-    if (isBreakShield == 1 && star >= 15 && star <= 18) {
-        cost += baseCost * 2;
+    const shield = STAR_FORCE.breakShield;
+    if (isBreakShield == 1 && star >= shield.fromStar && star <= shield.toStar) {
+        cost += baseCost * shield.extraCostMultiplier;
         breakOnFail = 0;
     }
 

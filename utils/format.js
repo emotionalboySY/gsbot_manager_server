@@ -36,4 +36,16 @@ function toKoreanUnit(value, maxParts) {
     return sign + parts.join(" ");
 }
 
-module.exports = { RULE, toKoreanUnit };
+// 천 단위 구분 쉼표. 예전에는 정규식으로 직접 자리수를 세는 34줄짜리 AddComma 가
+// index.js · routes/probability.js · routes/ranking.js · routes/enforcements.js 에
+// 각각 복사돼 있었다. toLocaleString 이 같은 일을 한다.
+//
+// maximumFractionDigits 를 올려 둔 이유: 기본값이 3 이라 소수점 넷째 자리부터
+// 잘린다. 옛 AddComma 는 소수부를 그대로 뒀으므로 동작을 맞춘다.
+function addComma(value) {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return undefined;   // 옛 AddComma 도 숫자가 아니면 undefined 였다
+    return num.toLocaleString("ko-KR", { maximumFractionDigits: 20 });
+}
+
+module.exports = { RULE, toKoreanUnit, addComma };

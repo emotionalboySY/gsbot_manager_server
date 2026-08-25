@@ -12,7 +12,7 @@
  * 그래서 확률을 직접 꺼내 표와 대조한다.
  */
 const {
-    STAR_FORCE, TYRANT, EVENT, RECOVERY,
+    STAR_FORCE, TYRANT, EVENT, RECOVERY, COST_TABLE,
     starForceOdds, tyrantOdds, restoreCost,
 } = require('./services/enforcements.js');
 
@@ -44,15 +44,6 @@ for (let star = 0; star <= STAR_FORCE.maxStar; star++) {
     expect('스타캐치 15성 유지', Math.round((1 - odds.success - odds.destroy) * 10000) / 100, 66.45);
 }
 
-// ── 파괴 30% 감소 이벤트 ──
-for (const event of [EVENT.LESS_BREAK, EVENT.SHINING]) {
-    for (const star of [17, 22, 25]) {
-        const plain = starForceOdds(160, star, 0, EVENT.NONE, 0).destroy;
-        const reduced = starForceOdds(160, star, 0, event, 0).destroy;
-        expect(`이벤트 ${event} ${star}성 파괴 30% 감소`, Math.round(reduced / plain * 1000) / 1000, 0.7);
-    }
-}
-
 // ── 타일런트: 두 확률표 모두 그대로여야 한다 ──
 for (const isStarCatch of [0, 1]) {
     const breakTable = isStarCatch ? TYRANT.breakStarCatch : TYRANT.break;
@@ -61,6 +52,62 @@ for (const isStarCatch of [0, 1]) {
         const odds = tyrantOdds(star, isStarCatch);
         expect(`타일런트 ${star}성 성공 (sc=${isStarCatch})`, odds.success, successTable[star] / 100);
         expect(`타일런트 ${star}성 파괴 (sc=${isStarCatch})`, odds.destroy, breakTable[star] / 100);
+    }
+}
+
+// ── 공시 확률표 전체 대조 ─────────────────────────────────────────────
+//
+// 나무위키 "일반 아이템" 확률표. 성공 확률이 이쪽 표의 정확히 1.05배라
+// **스타캐치 적용본** 이다. 그래서 스타캐치를 켜고 대조한다.
+//
+// 26성 실패 확률만 74.16 으로 적혀 있는데 그 행만 합이 100.04 다. 위키 본문이
+// "실패 확률은 100%에서 성공 확률과 파괴 확률을 빼서 계산한다" 고 못박아 뒀으니
+// 74.12 가 맞다. 옮겨 적을 때 고쳐 넣었다.
+const OFFICIAL_STARCATCH = [
+    [0, 99.75, 0.250, 0], [1, 94.50, 5.500, 0], [2, 89.25, 10.750, 0],
+    [3, 89.25, 10.750, 0], [4, 84.00, 16.000, 0], [5, 78.75, 21.250, 0],
+    [6, 73.50, 26.500, 0], [7, 68.25, 31.750, 0], [8, 63.00, 37.000, 0],
+    [9, 57.75, 42.250, 0], [10, 52.50, 47.500, 0], [11, 47.25, 52.750, 0],
+    [12, 42.00, 58.000, 0], [13, 36.75, 63.250, 0], [14, 31.50, 68.500, 0],
+    [15, 31.50, 66.445, 2.055], [16, 31.50, 66.445, 2.055],
+    [17, 15.75, 77.510, 6.740], [18, 15.75, 77.510, 6.740],
+    [19, 15.75, 75.825, 8.425], [20, 31.50, 58.225, 10.275],
+    [21, 15.75, 71.6125, 12.6375], [22, 15.75, 67.40, 16.85],
+    [23, 10.50, 71.60, 17.90], [24, 10.50, 71.60, 17.90], [25, 10.50, 71.60, 17.90],
+    [26, 7.35, 74.12, 18.53], [27, 5.25, 75.80, 18.95],
+    [28, 3.15, 77.48, 19.37], [29, 1.05, 79.16, 19.79]
+];
+for (const [star, success, keep, destroy] of OFFICIAL_STARCATCH) {
+    const odds = starForceOdds(160, star, 1, EVENT.NONE, 0);
+    expect(`공시 ${star}성 성공(스타캐치)`, odds.success * 100, success);
+    expect(`공시 ${star}성 파괴(스타캐치)`, odds.destroy * 100, destroy);
+    expect(`공시 ${star}성 유지(스타캐치)`, (1 - odds.success - odds.destroy) * 100, keep);
+}
+
+// 비용 분모. 11성이 374 로 적혀 있었다(2026-08-25 수정)
+const OFFICIAL_DENOMINATOR = {
+    10: 571, 11: 314, 12: 214, 13: 157, 14: 107, 15: 200, 16: 200,
+    17: 150, 18: 70, 19: 45, 20: 200, 21: 125
+};
+for (let star = 0; star <= STAR_FORCE.maxStar; star++) {
+    const expected = star <= 9 ? 36 : (OFFICIAL_DENOMINATOR[star] || 200);
+    expect(`비용 분모 ${star}성`, COST_TABLE[star].denominator, expected);
+    expect(`비용 지수 ${star}성`, COST_TABLE[star].exponent, star <= 9 ? 1 : 2.7);
+}
+
+// ── 파괴율 30% 감소 상한 ──────────────────────────────────────────────
+// 공시표의 감소 열은 15~21성에만 값이 있다. 22성부터는 그대로여야 한다.
+for (const event of [EVENT.LESS_BREAK, EVENT.SHINING]) {
+    for (let star = 15; star <= STAR_FORCE.maxStar; star++) {
+        const plain = starForceOdds(160, star, 1, EVENT.NONE, 0).destroy;
+        const got = starForceOdds(160, star, 1, event, 0).destroy;
+        const expected = star <= STAR_FORCE.lessBreakMaxStar ? plain * 0.7 : plain;
+        // 구현은 조건부 파괴율에 0.7 을 곱한 뒤 (1-성공) 을 곱하고, 이 식은 순서가
+        // 반대다. 대수적으로는 같지만 부동소수점 끝자리가 갈려 상대 오차로 본다.
+        checked++;
+        if (Math.abs(got - expected) > Math.max(expected, 1e-9) * 1e-9) {
+            failures.push(`이벤트 ${event} ${star}성 파괴: 실제 ${got} / 기대 ${expected}`);
+        }
     }
 }
 

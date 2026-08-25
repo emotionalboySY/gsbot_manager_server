@@ -8,9 +8,13 @@ const json = require('../utils/json.js');
 
 router.get('/superial', (req, res) => {
 
-    const { start, goal, isStarCatch } = req.query;
+    // req.query 값은 전부 문자열이다. 숫자로 바꾸지 않으면 아래에서 문자열 연산이
+    // 섞여 들어간다 — isStarCatch 가 "0" 이어도 truthy 라 스타캐치가 늘 적용됐다.
+    const start = Number(req.query.start);
+    const goal = Number(req.query.goal);
+    const isStarCatch = Number(req.query.isStarCatch);
 
-    console.log(`${time.getNowDateTime()} - 스타포스시뮬(슈페리얼, ${start}, ${goal}, ${isStarCatch})`);
+    console.log(`${time.getNowDateTime()} - 스타포스시뮬(슈페리얼, ${req.query.start}, ${req.query.goal}, ${req.query.isStarCatch})`);
 
     let success = false;
     let successM = '명령어 실행 결과: ';
@@ -137,9 +141,18 @@ router.get('/superial', (req, res) => {
 
 router.get('/starForce', (req, res) => {
 
-    const { itemLev, startForce, goalForce, isStarCatch, isEvent, isBreakShield } = req.query;
+    // req.query 값은 전부 문자열이다. 문자열인 채로 두면
+    //   - curForce += 2 가 "0"+2 = "02" 가 되어 배열 인덱스를 못 찾고 무한 루프에 빠지고
+    //   - if (isStarCatch) 가 "0" 에도 참이라 스타캐치가 늘 적용되고
+    //   - switch (isEvent) 가 === 비교라 어떤 case 에도 안 걸려 안내문이 늘 "미적용" 이 된다
+    const itemLev = Number(req.query.itemLev);
+    const startForce = Number(req.query.startForce);
+    const isStarCatch = Number(req.query.isStarCatch);
+    const isEvent = Number(req.query.isEvent);
+    const isBreakShield = Number(req.query.isBreakShield);
+    let goalForce = Number(req.query.goalForce);   // 상한을 넘으면 아래에서 깎는다
 
-    console.log(`${time.getNowDateTime()} - 스타포스시뮬(${itemLev}, ${startForce}, ${goalForce}, ${isStarCatch}, ${isEvent}, ${isBreakShield})`);
+    console.log(`${time.getNowDateTime()} - 스타포스시뮬(${req.query.itemLev}, ${req.query.startForce}, ${req.query.goalForce}, ${req.query.isStarCatch}, ${req.query.isEvent}, ${req.query.isBreakShield})`);
 
     let success = false;
     let successM = '명령어 실행 결과: ';
@@ -353,8 +366,10 @@ router.get('/starForce', (req, res) => {
             // 전송할 메시지 구성
             content = '<스타포스 시뮬레이션 완료>\n\n';
             if (isOutofBound) {
-                message =
-                    message +
+                // 선언된 적 없는 message 에 더하고 있었다. 값이 검증을 통과하지 못해
+                // 지금은 닿지 않는 가지지만, 닿으면 ReferenceError 로 터진다.
+                content =
+                    content +
                     '(시뮬레이션 목표 강화 수치가 아이템 레벨 제한에 맞지 않아 조정되었습니다.)\n\n';
             }
             content = content + itemLev + '레벨 아이템을\n';

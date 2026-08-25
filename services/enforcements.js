@@ -46,7 +46,15 @@ const STAR_FORCE = {
      * 옮기면서 한 칸 밀린 것으로 보인다 — 18성(18→19)에도 파괴 방지가 걸려
      * 파괴 확률 6.8% 가 통째로 빠져 있었다.
      */
-    breakShield: { fromStar: 15, toStar: 17, extraCostMultiplier: 2 }
+    breakShield: { fromStar: 15, toStar: 17, extraCostMultiplier: 2 },
+    /**
+     * 파괴 확률 30% 감소(썬데이메이플)가 걸리는 상한 성수.
+     *
+     * 공시표의 감소 열은 15~21성에만 값이 있고 22성부터 "미적용" 이다. 봇
+     * 사용법 문구도 "21성 이하 파괴확률 30% 감소" 라고 적혀 있었는데 구현에는
+     * 상한이 없어 29성까지 다 깎이고 있었다(2026-08-25 수정).
+     */
+    lessBreakMaxStar: 21
 };
 
 /**
@@ -151,8 +159,9 @@ function starForceOdds(itemLev, star, isStarCatch, isEvent, isBreakShield) {
     const success = isStarCatch ? roundTo(baseSuccess * 1.05, 4) : baseSuccess;
 
     let breakOnFail = breakGivenFail(STAR_FORCE.break[star], STAR_FORCE.success[star]);
-    // 파괴 확률 30% 감소 (성공 확률은 오르지 않는다)
-    if (isEvent == EVENT.LESS_BREAK || isEvent == EVENT.SHINING) {
+    // 파괴 확률 30% 감소 (성공 확률은 오르지 않는다). 21성까지만 걸린다
+    const lessBreak = isEvent == EVENT.LESS_BREAK || isEvent == EVENT.SHINING;
+    if (lessBreak && star <= STAR_FORCE.lessBreakMaxStar) {
         breakOnFail = roundTo(breakOnFail * 0.7, 4);
     }
 
@@ -198,7 +207,11 @@ const COST_TABLE = (() => {
     const table = [];
     for (let force = 0; force <= STAR_FORCE.maxStar; force++) {
         if (force <= 9) { table.push({ denominator: 36, exponent: 1 }); continue; }
-        const byStar = { 10: 571, 11: 374, 12: 214, 13: 157, 14: 107,
+        // 11성이 374 로 적혀 있었다. 공시는 314 다(2026-08-25 수정).
+        // 분모 수열에 대응이 보인다 — 12성 214 = 2 x 107(14성),
+        // 11성 314 = 2 x 157(13성). 374 면 이 대응이 깨지고 비용 증가율도
+        // 10→11→12 구간에서 한 번 튄다.
+        const byStar = { 10: 571, 11: 314, 12: 214, 13: 157, 14: 107,
                          15: 200, 16: 200, 17: 150, 18: 70, 19: 45, 20: 200, 21: 125 };
         table.push({ denominator: byStar[force] || 200, exponent: 2.7 });
     }

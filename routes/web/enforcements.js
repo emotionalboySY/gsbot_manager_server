@@ -46,6 +46,8 @@ router.get('/tables', (req, res) => {
             // fromStar~toStar 는 15·16·17 성이다(15→16, 16→17, 17→18 세 번).
             // 18성부터는 파괴 방지를 걸 수 없다.
             breakShield: enforcements.STAR_FORCE.breakShield,
+            // 파괴 확률 30% 감소는 이 성수까지만 걸린다(공시표는 22성부터 미적용)
+            lessBreakMaxStar: enforcements.STAR_FORCE.lessBreakMaxStar,
             /**
              * 파괴 장비 복구.
              *

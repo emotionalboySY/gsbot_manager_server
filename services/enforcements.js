@@ -48,23 +48,24 @@ function fail(reason, message) {
     return { ok: false, reason, message };
 }
 
-/** 강화 단계별 비용 계수. 단계마다 분모가 달라 비용 곡선이 꺾인다. */
-function costDenominator(force) {
-    switch (true) {
-        case force <= 9:  return { denominator: 36, exponent: 1 };
-        case force == 10: return { denominator: 571, exponent: 2.7 };
-        case force == 11: return { denominator: 374, exponent: 2.7 };
-        case force == 12: return { denominator: 214, exponent: 2.7 };
-        case force == 13: return { denominator: 157, exponent: 2.7 };
-        case force == 14: return { denominator: 107, exponent: 2.7 };
-        case force == 15 || force == 16: return { denominator: 200, exponent: 2.7 };
-        case force == 17: return { denominator: 150, exponent: 2.7 };
-        case force == 18: return { denominator: 70, exponent: 2.7 };
-        case force == 19: return { denominator: 45, exponent: 2.7 };
-        case force == 20: return { denominator: 200, exponent: 2.7 };
-        case force == 21: return { denominator: 125, exponent: 2.7 };
-        default:          return { denominator: 200, exponent: 2.7 };
+// 강화 단계별 비용 계수. 단계마다 분모가 달라 비용 곡선이 꺾인다.
+// switch 문이었는데 표로 폈다 — 브라우저에서 같은 비용을 계산하려면 내보낼 수
+// 있는 데이터여야 한다. 인덱스가 강화 단계다.
+const COST_TABLE = (() => {
+    const table = [];
+    for (let force = 0; force <= STAR_FORCE.maxStar; force++) {
+        if (force <= 9) { table.push({ denominator: 36, exponent: 1 }); continue; }
+        const byStar = { 10: 571, 11: 374, 12: 214, 13: 157, 14: 107,
+                         15: 200, 16: 200, 17: 150, 18: 70, 19: 45, 20: 200, 21: 125 };
+        table.push({ denominator: byStar[force] || 200, exponent: 2.7 });
     }
+    return table;
+})();
+
+const DEFAULT_COST = { denominator: 200, exponent: 2.7 };
+
+function costDenominator(force) {
+    return COST_TABLE[force] || DEFAULT_COST;
 }
 
 /**
@@ -233,4 +234,4 @@ function starForce(itemLevRaw, startForceRaw, goalForceRaw, isStarCatchRaw, isEv
     };
 }
 
-module.exports = { TYRANT, STAR_FORCE, EVENT, superial, starForce };
+module.exports = { TYRANT, STAR_FORCE, EVENT, COST_TABLE, superial, starForce };

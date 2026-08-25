@@ -48,4 +48,14 @@ function addComma(value) {
     return num.toLocaleString("ko-KR", { maximumFractionDigits: 20 });
 }
 
-module.exports = { RULE, toKoreanUnit, addComma };
+// 목적격 조사. 구성품 이름을 공시 표에서 뽑아 쓰게 되면서 받침 여부를 알 수 없어졌다
+// ("달콤 생일 케이크를" 은 맞지만 "부티크 티켓를" 은 틀리다).
+// 한글 음절은 0xAC00 부터 28개 종성 주기로 배열되어 있어, 나머지가 0 이면 받침이 없다.
+function objectParticle(word) {
+    const last = String(word).trim().slice(-1);
+    const code = last.charCodeAt(0);
+    if (code < 0xAC00 || code > 0xD7A3) return "를";   // 한글이 아니면 굳이 따지지 않는다
+    return (code - 0xAC00) % 28 === 0 ? "를" : "을";
+}
+
+module.exports = { RULE, toKoreanUnit, addComma, objectParticle };

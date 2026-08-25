@@ -6,7 +6,7 @@
  *
  * 모든 함수는 { plain, markdown } 을 돌려준다. 방에 따라 봇이 골라 쓴다.
  */
-const { RULE, addComma } = require('../utils/format.js');
+const { RULE, addComma, objectParticle } = require('../utils/format.js');
 const ringPolishUtil = require('../utils/ring_polish.js');
 
 /** 주문서 전체 목록 + 사용법 */
@@ -93,7 +93,7 @@ function ringPolishResult(data) {
 
 /** 캐시샵 확률형 아이템 결과. 뽑기 내역과 비용 요약을 구분선으로 가른다. */
 function cashBoxResult(data) {
-    const { box, iteration, rows, cost, totalQuantity } = data;
+    const { box, iteration, rows, cost, quantityUnit, totalQuantity, feverEvery } = data;
     const costText = addComma(cost);
 
     let message = `< ${box.label} 결과 >\n시도 횟수: ${addComma(iteration)}회\n`;
@@ -106,13 +106,13 @@ function cashBoxResult(data) {
     const plainLines = [`총 사용 캐시: ${costText}원`, `(1개당 ${addComma(box.unitCost)}원 기준)`];
     const markdownLines = [`1개당 ${addComma(box.unitCost)}원 기준`];
 
-    if (box.quantityUnit) {
-        const line = `${box.quantityUnit}를 총 ${addComma(totalQuantity)}개 얻었어요!`;
+    if (quantityUnit) {
+        const line = `${quantityUnit}${objectParticle(quantityUnit)} 총 ${addComma(totalQuantity)}개 얻었어요!`;
         plainLines.push(line);
         markdownLines.push(line);
     }
-    if (box.feverEvery) {
-        const line = `${box.feverEvery}회마다 1개를 더 받는 피버 타임이 반영되어 있습니다.`;
+    if (feverEvery) {
+        const line = `${feverEvery}회마다 피버 타임 확률표에서 뽑습니다.`;
         plainLines.push(`※ ${line}`);
         markdownLines.push(line);
     }

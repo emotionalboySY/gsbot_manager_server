@@ -127,9 +127,9 @@ async function cashBox(key, iterationRaw) {
         return fail(`${box.label} 시뮬레이션은 서버 과부하 방지를 위해 ${cashProbability.MAX_ITERATION.toLocaleString("ko-KR")}회까지 가능합니다.`);
     }
 
-    let items;
+    let tables;
     try {
-        items = await cashProbability.fetchItems(box.url, box.cleanName);
+        tables = await cashProbability.fetchTables(box.url, box.cleanName);
     } catch (e) {
         console.error(`${box.label} 확률 조회 실패: ${e.message}`);
         return fail(`${box.label} 확률 정보를 넥슨에서 가져오지 못했습니다. 잠시 후 다시 시도해 주세요.`);
@@ -137,11 +137,16 @@ async function cashBox(key, iterationRaw) {
 
     // 예전에는 스크래핑이 실패해도 빈 목록으로 진행해 "시도 횟수"만 찍힌
     // 성공 응답이 나갔다. 넥슨이 페이지를 바꿔도 아무도 눈치채지 못하던 원인이다.
-    if (items.length === 0) {
+    if (tables.normal.length === 0) {
         return fail(`${box.label} 확률 표를 읽지 못했습니다. 공시 페이지 구조가 바뀌었을 수 있습니다.`);
     }
 
-    const counts = cashProbability.simulate(items, iteration, box);
+    const counts = cashProbability.simulate(tables, iteration, box);
+
+    // 구성품 이름은 주기적으로 바뀐다. 표에서 뽑아낸다.
+    const allItems = tables.fever ? [...tables.normal, ...tables.fever] : tables.normal;
+    const quantityUnit = box.sumQuantity ? cashProbability.deriveQuantityUnit(allItems) : null;
+
     return {
         ok: true,
         box,
@@ -150,7 +155,10 @@ async function cashBox(key, iterationRaw) {
             .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
             .map(([name, count]) => ({ name, count })),
         cost: iteration * box.unitCost,
-        totalQuantity: box.quantityUnit ? cashProbability.totalQuantity(counts) : null
+        quantityUnit,
+        totalQuantity: quantityUnit ? cashProbability.totalQuantity(counts) : null,
+        // 피버 표를 실제로 찾았는지. 못 찾으면 전부 일반 확률로 돌린다.
+        feverEvery: box.feverEvery && tables.fever ? box.feverEvery : null
     };
 }
 

@@ -56,7 +56,7 @@ router.get('/cash', (req, res) => {
             label: box.label,
             unitCost: box.unitCost,
             feverEvery: box.feverEvery || null,
-            quantityUnit: box.quantityUnit || null
+            sumQuantity: Boolean(box.sumQuantity)
         }))
     });
 });
@@ -72,9 +72,9 @@ router.get('/cash/:box', async (req, res) => {
         return res.status(404).json({ message: `알 수 없는 상자입니다: ${key}` });
     }
 
-    let items;
+    let tables;
     try {
-        items = await cashProbability.fetchItems(box.url, box.cleanName);
+        tables = await cashProbability.fetchTables(box.url, box.cleanName);
     } catch (e) {
         console.error(`${time.getNowDateTime()} - [web] ${box.label} 확률 조회 실패: ${e.message}`);
         return res.status(502).json({
@@ -82,7 +82,7 @@ router.get('/cash/:box', async (req, res) => {
         });
     }
 
-    if (items.length === 0) {
+    if (tables.normal.length === 0) {
         return res.status(502).json({
             message: `${box.label} 확률 표를 읽지 못했습니다. 공시 페이지 구조가 바뀌었을 수 있습니다.`
         });
@@ -95,12 +95,15 @@ router.get('/cash/:box', async (req, res) => {
         key,
         label: box.label,
         unitCost: box.unitCost,
-        feverEvery: box.feverEvery || null,
-        quantityUnit: box.quantityUnit || null,
+        // 피버 표를 못 찾았으면 null 이다. 그때는 전부 일반 확률로 돌린다.
+        feverEvery: box.feverEvery && tables.fever ? box.feverEvery : null,
+        sumQuantity: Boolean(box.sumQuantity),
         maxIteration: cashProbability.MAX_ITERATION,
         source: box.url,
         // 공시 표가 반올림 표기라 합이 정확히 100% 가 아니다. 뽑기는 마지막 항목으로 보정한다.
-        items
+        // 기간별로 표가 여러 개인 페이지가 있어 지금 적용 중인 표만 골라 담는다.
+        items: tables.normal,
+        feverItems: tables.fever
     });
 });
 

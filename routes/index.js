@@ -14,6 +14,7 @@ const fcmRouter = require('./fcm.js');
 const probability = require('./probability.js');
 const homepage = require('./home_page_scrapping.js');
 const berry = require('./berry.js');
+const web = require('./web/index.js');
 
 router.use("/history", history);
 router.use("/main_character", mainCharacter);
@@ -28,5 +29,8 @@ router.use("/fcm", fcmRouter);
 router.use("/probability", probability);
 router.use("/homepage", homepage);
 router.use("/berry", berry);
+
+// 메이플링(웹)용. 봇과 응답 형식이 달라 갈라 둔다.
+router.use("/web", web);
 
 module.exports = router;

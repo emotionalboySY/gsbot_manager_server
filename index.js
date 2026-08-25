@@ -49,7 +49,27 @@ const server = http.createServer(app);
 server.keepAliveTimeout = 65000;
 server.headersTimeout = 66000;
 
-app.use(cors());
+// 브라우저에서 이 API 를 부르는 것은 메이플링뿐이다. 봇(안드로이드)·관리 앱
+// (Flutter·React Native)은 브라우저가 아니라 CORS 를 적용받지 않으므로 영향이 없다.
+// Expo 웹(react-native-web)으로 RN 앱을 띄울 때만 브라우저가 되어 여기 걸린다.
+const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS ||
+    [
+        'https://maple.emotionbsy.com',   // 메이플링 운영
+        'http://localhost:3100',          // 메이플링 로컬
+        'http://localhost:3000',
+        'http://localhost:8081',          // Expo 웹 기본 포트
+        'http://localhost:19006'
+    ].join(',')
+).split(',').map((o) => o.trim()).filter(Boolean);
+
+app.use(cors({
+    origin(origin, callback) {
+        // Origin 헤더가 없는 요청(네이티브 앱 · 서버 간 호출 · curl)은 그대로 통과시킨다.
+        // CORS 는 브라우저가 강제하는 규약이라 이런 요청에는 애초에 적용되지 않는다.
+        if (!origin || ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+        return callback(null, false);   // 헤더를 안 붙이면 브라우저가 알아서 막는다
+    }
+}));
 
 const mongoURI = process.env.MONGO_URI;
 mongoose.connect(mongoURI).catch(err => {

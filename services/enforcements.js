@@ -48,6 +48,78 @@ function fail(reason, message) {
     return { ok: false, reason, message };
 }
 
+/**
+ * 한 번 시도할 때의 결과 확률.
+ *
+ * 공시표의 파괴 확률은 **절대값** 이다 (성공 + 유지 + 파괴 = 100%). 그런데
+ * 진행 판정은 성공 판정에서 떨어진 뒤 파괴를 따로 굴리는 2단 구조라, 둘째
+ * 난수에 넣을 값은 "실패했다는 전제 하의 파괴율" 이어야 한다. 절대값을 그대로
+ * 넣으면 실제 파괴 확률이 (1 - 성공률) 배로 깎인다.
+ *
+ *   15성: 2.1% 를 그대로 넣으면 0.7 x 2.1 = 1.47% 로 굴러간다
+ *
+ * 나눠 두면 스타캐치의 공시 재정규화까지 저절로 맞는다.
+ *
+ *   (1 - 0.315) x (2.1 / 0.7) = 2.055%   ← 공시 2.06%
+ *
+ * 이 나눗셈 결과가 3/8/10/15/20% 처럼 딱 떨어지는 것은 우연이 아니다. 공시
+ * 파괴율 자체가 이 값에 (1 - 성공률) 을 곱해 만들어진 것이다.
+ */
+function breakGivenFail(absoluteBreakPct, baseSuccessPct) {
+    if (!(absoluteBreakPct > 0)) return 0;
+    const rest = 1 - baseSuccessPct / 100;
+    return rest > 0 ? (absoluteBreakPct / 100) / rest : 0;
+}
+
+/**
+ * 스타포스 한 단계의 확률과 비용. 성수마다 고정이므로 시뮬 루프 밖에서
+ * 한 번만 만들어 쓴다.
+ */
+function starForceOdds(itemLev, star, isStarCatch, isEvent, isBreakShield) {
+    const baseSuccess = STAR_FORCE.success[star] / 100;
+    // 스타캐치는 성공 확률만 올린다
+    const success = isStarCatch ? roundTo(baseSuccess * 1.05, 4) : baseSuccess;
+
+    let breakOnFail = breakGivenFail(STAR_FORCE.break[star], STAR_FORCE.success[star]);
+    // 파괴 확률 30% 감소 (성공 확률은 오르지 않는다)
+    if (isEvent == EVENT.LESS_BREAK || isEvent == EVENT.SHINING) {
+        breakOnFail = roundTo(breakOnFail * 0.7, 4);
+    }
+
+    const { denominator, exponent } = costDenominator(star);
+    const rawCost = 1000 + (Math.pow(itemLev, 3) * Math.pow(star + 1, exponent) / denominator);
+    const baseCost = roundTo(rawCost, -2);
+    let cost = (isEvent == EVENT.DISCOUNT || isEvent == EVENT.SHINING)
+        ? roundTo(rawCost * 0.7, -2)
+        : baseCost;
+
+    // 파괴방지: 비용을 더 내고 파괴 확률을 0 으로 만든다.
+    // 추가분은 "할인 전" 비용 기준이라, 할인 이벤트와 겹쳐도 할인가의 3배가
+    // 아니라 (할인가 + 할인전가 x 2) 가 된다.
+    if (isBreakShield == 1 && star >= 15 && star <= 18) {
+        cost += baseCost * 2;
+        breakOnFail = 0;
+    }
+
+    return {
+        success,
+        breakOnFail,
+        cost,
+        // 실제로 이번 시도에서 파괴될 확률. 공시표와 대조할 때 쓴다
+        destroy: (1 - success) * breakOnFail
+    };
+}
+
+/** 타일런트 한 단계의 확률. 비용은 단계와 무관하게 정액이다 */
+function tyrantOdds(star, isStarCatch) {
+    const successTable = isStarCatch ? TYRANT.successStarCatch : TYRANT.success;
+    const breakTable = isStarCatch ? TYRANT.breakStarCatch : TYRANT.break;
+    const success = successTable[star] / 100;
+    // 스타캐치표는 이미 재정규화된 값이라 같은 표끼리 나누면 맞는다
+    const breakOnFail = breakGivenFail(breakTable[star], successTable[star]);
+    return { success, breakOnFail, destroy: (1 - success) * breakOnFail };
+}
+
 // 강화 단계별 비용 계수. 단계마다 분모가 달라 비용 곡선이 꺾인다.
 // switch 문이었는데 표로 폈다 — 브라우저에서 같은 비용을 계산하려면 내보낼 수
 // 있는 데이터여야 한다. 인덱스가 강화 단계다.
@@ -90,8 +162,9 @@ function superial(startRaw, goalRaw, isStarCatchRaw) {
             `타일런트 시뮬레이션의 목표 강화 수치는 시작 강화 수치보다 항상 높아야 합니다.\n\n다시 시도해 주세요.`);
     }
 
-    const successTable = isStarCatch ? TYRANT.successStarCatch : TYRANT.success;
-    const breakTable = isStarCatch ? TYRANT.breakStarCatch : TYRANT.break;
+    // 확률은 성수마다 고정이라 루프 밖에서 한 번만 만든다
+    const odds = [];
+    for (let star = 0; star < goal; star++) odds.push(tyrantOdds(star, isStarCatch));
 
     let curLev = start;
     let totalCost = 0;
@@ -99,10 +172,11 @@ function superial(startRaw, goalRaw, isStarCatchRaw) {
     let failStack = 0;
 
     while (curLev < goal) {
-        let curSuccess = successTable[curLev] / 100;
-        const curBreak = breakTable[curLev] / 100;
+        const { success, breakOnFail } = odds[curLev];
+        let curSuccess = success;
 
-        // 연속 2회 실패하면 찬스 타임 — 다음 한 번은 무조건 성공
+        // 연속 2회 실패하면 찬스 타임 — 다음 한 번은 무조건 성공.
+        // 성공 확률이 1 이 되므로 이 시도에서는 파괴도 일어나지 않는다.
         if (failStack == 2) {
             curSuccess = 1;
             chanceCount++;
@@ -112,7 +186,7 @@ function superial(startRaw, goalRaw, isStarCatchRaw) {
             curLev++;
             successCount++;
             failStack = 0;
-        } else if (Math.random() <= curBreak) {
+        } else if (Math.random() <= breakOnFail) {
             curLev = 0;
             brokenCount++;
         } else {
@@ -174,39 +248,18 @@ function starForce(itemLevRaw, startForceRaw, goalForceRaw, isStarCatchRaw, isEv
             `스타포스 시뮬레이션의 목표 달성 수치는 시작 수치보다 항상 커야 합니다.\n\n다시 시도해 주세요.`);
     }
 
+    // 확률·비용은 성수마다 고정이라 루프 밖에서 한 번만 만든다
+    const odds = [];
+    for (let star = 0; star < goalForce; star++) {
+        odds.push(starForceOdds(itemLev, star, isStarCatch, isEvent, isBreakShield));
+    }
+
     let curForce = startForce;
     let totalCost = 0;
     let successCount = 0, failureCount = 0, brokenCount = 0;
 
     while (curForce < goalForce) {
-        let curSuccess, curBreak;
-        if (isStarCatch) {
-            curSuccess = roundTo((STAR_FORCE.success[curForce] / 100) * 1.05, 4);
-            // 스타캐치는 성공 확률만 올린다. 아래 식은 (1-p) 가 약분되어 원래 파괴
-            // 확률과 같아지지만, 반올림 결과를 유지하려고 원식 그대로 둔다.
-            curBreak = roundTo((1 - curSuccess) * (STAR_FORCE.break[curForce] / 100 / (1 - curSuccess)), 4);
-        } else {
-            curSuccess = STAR_FORCE.success[curForce] / 100;
-            curBreak = STAR_FORCE.break[curForce] / 100;
-        }
-
-        // 파괴 확률 30% 감소 (성공 확률은 오르지 않는다)
-        if (isEvent == EVENT.LESS_BREAK || isEvent == EVENT.SHINING) {
-            curBreak = roundTo(curBreak * 0.7, 4);
-        }
-
-        const { denominator, exponent } = costDenominator(curForce);
-        const rawCost = 1000 + (Math.pow(itemLev, 3) * Math.pow(curForce + 1, exponent) / denominator);
-        const curCost = roundTo(rawCost, -2);
-        const disCost = roundTo(rawCost * 0.7, -2);
-
-        let resCost = (isEvent == EVENT.DISCOUNT || isEvent == EVENT.SHINING) ? disCost : curCost;
-
-        // 파괴방지: 비용 3배를 내고 파괴 확률을 0 으로 만든다
-        if (isBreakShield == 1 && curForce >= 15 && curForce <= 18) {
-            resCost += curCost * 2;
-            curBreak = 0;
-        }
+        const { success: curSuccess, breakOnFail, cost: resCost } = odds[curForce];
 
         if (Math.random() <= curSuccess) {
             // 1+1 이벤트는 10성까지 한 번에 2단계 오른다
@@ -216,7 +269,7 @@ function starForce(itemLevRaw, startForceRaw, goalForceRaw, isStarCatchRaw, isEv
                 curForce++;
             }
             successCount++;
-        } else if (Math.random() <= curBreak) {
+        } else if (Math.random() <= breakOnFail) {
             curForce = STAR_FORCE.brokenTo;
             brokenCount++;
         } else {
@@ -234,4 +287,8 @@ function starForce(itemLevRaw, startForceRaw, goalForceRaw, isStarCatchRaw, isEv
     };
 }
 
-module.exports = { TYRANT, STAR_FORCE, EVENT, COST_TABLE, superial, starForce };
+module.exports = {
+    TYRANT, STAR_FORCE, EVENT, COST_TABLE,
+    breakGivenFail, starForceOdds, tyrantOdds,
+    superial, starForce
+};

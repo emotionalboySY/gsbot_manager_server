@@ -18,6 +18,19 @@ router.get('/tables', (req, res) => {
     return res.status(200).json({
         starForce: {
             success: enforcements.STAR_FORCE.success,
+            // 주의 — 이 값은 공시표 기준 **절대** 파괴 확률이다.
+            // 성공 + 유지 + 파괴 = 100% 이고, 인덱스는 현재 성수다.
+            //
+            // 성공 판정에서 떨어진 뒤 파괴를 따로 굴리는 2단 구조로 시뮬을
+            // 짠다면, 둘째 난수에 이 값을 그대로 넣으면 안 된다. "실패했다는
+            // 전제 하의 파괴율" 로 바꿔야 한다.
+            //
+            //   조건부 파괴율 = break[i] / (1 - success[i])
+            //   실제 파괴 확률 = (1 - 적용된 성공률) x 조건부 파괴율
+            //
+            // 그대로 넣으면 파괴가 (1 - 성공률) 배로 깎인다. 22성이면 17% 가
+            // 14.45% 로 굴러가고 비용 기댓값이 25% 낮게 나온다. 실제로 이
+            // 실수가 있었다(2026-08-25 수정).
             break: enforcements.STAR_FORCE.break,
             maxStar: enforcements.STAR_FORCE.maxStar,
             brokenTo: enforcements.STAR_FORCE.brokenTo,
@@ -32,6 +45,8 @@ router.get('/tables', (req, res) => {
             breakShield: { fromStar: 15, toStar: 18, extraCostMultiplier: 2 }
         },
         tyrant: {
+            // 스타포스와 같다 — 절대 파괴 확률이므로 조건부로 바꿔 써야 한다.
+            // 스타캐치표는 이미 재정규화된 값이라 같은 표끼리 나누면 맞는다.
             success: enforcements.TYRANT.success,
             break: enforcements.TYRANT.break,
             successStarCatch: enforcements.TYRANT.successStarCatch,

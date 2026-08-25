@@ -42,7 +42,33 @@ router.get('/tables', (req, res) => {
             // 파괴방지: 파괴 확률이 0 이 되는 대신 추가 비용을 낸다.
             // 추가분은 "할인 전" 기본 비용 기준이다 — 할인 이벤트와 겹쳐도
             // 할인가의 3배가 아니라 (할인가 + 기본가 x 2) 가 된다.
-            breakShield: { fromStar: 15, toStar: 18, extraCostMultiplier: 2 }
+            //
+            // fromStar~toStar 는 15·16·17 성이다(15→16, 16→17, 17→18 세 번).
+            // 18성부터는 파괴 방지를 걸 수 없다.
+            breakShield: enforcements.STAR_FORCE.breakShield,
+            /**
+             * 파괴 장비 복구.
+             *
+             * 파괴되면 강화 상태를 담은 "장비의 흔적" 이 남고 동일한 장비에
+             * 전승해 복구한다. 재료로 쓴 장비는 소멸한다. 두 가지 중에 고른다.
+             *
+             *   methods.TWELVE   재료 1개, 메소 없음 → 12성
+             *   methods.PREVIOUS 아래 표대로 장비와 메소 → 파괴 직전 성수.
+             *                    22성이 상한이라 그 위에서 파괴되면 22성까지만
+             *
+             * 복구 메소 = byStar[성수].coefficient x itemLev^3
+             *
+             * 공시표는 140/160/200/250제 네 값만 주는데 넷 다 레벨 세제곱에
+             * 정확히 비례해서 계수 하나로 모든 레벨을 덮는다. 재현 오차는 0.2%
+             * 이내이고, 그건 공시가 유효숫자 3자리로 반올림된 몫이다.
+             */
+            restore: {
+                minStar: enforcements.RESTORE.minStar,
+                maxStar: enforcements.RESTORE.maxStar,
+                byStar: enforcements.RESTORE.byStar,
+                twelve: enforcements.RESTORE.twelve,
+                methods: enforcements.RECOVERY
+            }
         },
         tyrant: {
             // 스타포스와 같다 — 절대 파괴 확률이므로 조건부로 바꿔 써야 한다.

@@ -56,7 +56,8 @@ server.headersTimeout = 66000;
 // 붙어야 하면 CORS_ORIGINS 에 그 호스트를 넣어 pm2 를 다시 띄운다.
 const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS ||
     [
-        'https://maple.emotionbsy.com',            // 메이플링 운영
+        'https://maple-ing.com',                   // 메이플링 운영
+        'https://maple.emotionbsy.com',            // 메이플링 옛 도메인(전환 기간)
         'https://gsbot-manager-rn.vercel.app',     // RN 관리 앱 웹 배포(운영)
         'http://localhost:3100',                   // 메이플링 로컬
         'http://localhost:3000',

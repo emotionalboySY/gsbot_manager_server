@@ -13,5 +13,6 @@ const router = express.Router();
 
 router.use('/enforcements', require('./enforcements.js'));
 router.use('/probability', require('./probability.js'));
+router.use('/boss', require('./boss.js'));
 
 module.exports = router;

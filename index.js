@@ -49,20 +49,17 @@ const server = http.createServer(app);
 server.keepAliveTimeout = 65000;
 server.headersTimeout = 66000;
 
-// 브라우저에서 이 API 를 부르는 것은 메이플링과 RN 관리 앱의 웹 배포다. 봇
-// (안드로이드)·Flutter 관리 앱·RN 네이티브 빌드는 브라우저가 아니라 CORS 를
-// 적용받지 않으므로 영향이 없다.
-// Vercel 프리뷰 배포는 배포마다 호스트가 달라 여기에 못 적는다. 프리뷰로
-// 붙어야 하면 CORS_ORIGINS 에 그 호스트를 넣어 pm2 를 다시 띄운다.
+// 브라우저에서 이 API 를 부르는 것은 메이플링뿐이다. 봇(안드로이드)·Flutter
+// 관리 앱은 브라우저가 아니라 CORS 를 적용받지 않는다. 봇 관리 백오피스
+// (admin.maple-ing.com/admin/bot)는 같은 서버 안에서 루프백으로 부르므로
+// Origin 헤더 없이 온다. RN 관리 앱의 웹 배포(Vercel)는 2026-09-08 에 내렸다.
+// 다른 호스트를 붙여야 하면 CORS_ORIGINS 에 넣어 pm2 를 다시 띄운다.
 const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS ||
     [
         'https://maple-ing.com',                   // 메이플링 운영
         'https://maple.emotionbsy.com',            // 메이플링 옛 도메인(전환 기간)
-        'https://gsbot-manager-rn.vercel.app',     // RN 관리 앱 웹 배포(운영)
         'http://localhost:3100',                   // 메이플링 로컬
-        'http://localhost:3000',
-        'http://localhost:8081',                   // Expo 웹 기본 포트
-        'http://localhost:19006'
+        'http://localhost:3000'
     ].join(',')
 ).split(',').map((o) => o.trim()).filter(Boolean);
 

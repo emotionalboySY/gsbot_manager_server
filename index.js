@@ -1,7 +1,6 @@
 const express = require('express');
 const puppeteer = require('puppeteer');
 const axios = require('axios');
-const cheerio = require('cheerio');
 const querystring = require('querystring');
 const cors = require('cors');
 require('dotenv').config({ quiet: true });
@@ -1040,45 +1039,34 @@ app.get('/seedRing/:mode/:iteration', (req, res) => {
 
 app.get('/sunday', async (req, res) => {
     console.log(`${time.getNowDateTime()} - 썬데이메이플`);
+    const url = openAPIBaseUrl + "/notice-event";
+
     try {
-        const url = 'https://maplestory.nexon.com/News/Event';
+        const config = {
+            method: 'get',
+            url: url,
+            headers: {
+                'accept': 'application/json',
+                'x-nxopen-api-key': process.env.API_KEY
+            },
+        };
+        let response = await axios(config);
+        let eventList = response.data.event_notice;
 
-        const response = await axios.get(url);
-        const html = response.data;
-        const $ = cheerio.load(html);
-
-        let isSunday = false;
-        let sundayUrl = '';
-
-        $('div[class=event_board] ul li').each((index, element) => {
-            let event_name = $(element).find('dd.data p a').text();
-            let url = $(element).find('dd.data p a').attr('href');
-            if (event_name == '썬데이 메이플') {
-                isSunday = true;
-                sundayUrl = 'https://maplestory.nexon.com' + url;
-            }
-        });
+        let sunday = eventList.find(obj => obj.title == '썬데이 메이플');
 
         let message = '';
-
-        if (isSunday) {
-            message = `썬데이 메이플 정보가 발견되었습니다.\n\n${sundayUrl}`;
+        if (sunday) {
+            let eventDate = sunday.date_event_start.slice(0, 10);
+            message = `썬데이 메이플 정보가 발견되었습니다.\n\n${eventDate}\n${sunday.url}`;
         } else {
             message = `썬데이 메이플 정보가 없습니다.`;
         }
 
-        res.status(200).json({
-            success: true,
-            result: encodeURIComponent(message),
-        });
-    } catch (error) {
-        const date = new Date();
-        console.log(date.toLocaleString());
-        console.log(error);
-        res.status(200).json({
-            success: false,
-            result: encodeURIComponent(error),
-        });
+        res.status(200).json(json.success(message));
+    } catch (e) {
+        console.error(e.response ? e.response.data : e);
+        res.status(200).json(json.nexonAPIError(e));
     }
 });
 

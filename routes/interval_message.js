@@ -79,7 +79,7 @@ router.get('/exact/:id', async (req, res) => {
 // 생성
 router.post('/exact', async (req, res) => {
     try {
-        const { year, month, day, hour, minute, message, isActive } = req.body;
+        const { year, month, day, hour, minute, message, title, isActive } = req.body;
 
         // 필수 필드 검증
         if (!year || !month || !day || hour === undefined || minute === undefined || !message) {
@@ -96,6 +96,7 @@ router.post('/exact', async (req, res) => {
             hour,
             minute,
             message,
+            title: title || '',
             isActive: isActive !== undefined ? isActive : true
         });
 
@@ -118,7 +119,7 @@ router.post('/exact', async (req, res) => {
 // 수정
 router.put('/exact/:id', async (req, res) => {
     try {
-        const { year, month, day, hour, minute, message, isActive } = req.body;
+        const { year, month, day, hour, minute, message, title, isActive } = req.body;
 
         const updatedMessage = await ExactTimeMessage.findByIdAndUpdate(
             req.params.id,
@@ -129,6 +130,7 @@ router.put('/exact/:id', async (req, res) => {
                 hour,
                 minute,
                 message,
+                title: title || '',
                 isActive,
                 updatedAt: Date.now()
             },
@@ -242,7 +244,7 @@ router.get('/weekly/day/:dayOfWeek', async (req, res) => {
 // 생성
 router.post('/weekly', async (req, res) => {
     try {
-        const { dayOfWeek, hour, minute, message, isActive } = req.body;
+        const { dayOfWeek, hour, minute, message, title, isActive } = req.body;
 
         // 필수 필드 검증
         if (!dayOfWeek || hour === undefined || minute === undefined || !message) {
@@ -257,6 +259,7 @@ router.post('/weekly', async (req, res) => {
             hour,
             minute,
             message,
+            title: title || '',
             isActive: isActive !== undefined ? isActive : true
         });
 
@@ -279,7 +282,7 @@ router.post('/weekly', async (req, res) => {
 // 수정
 router.put('/weekly/:id', async (req, res) => {
     try {
-        const { dayOfWeek, hour, minute, message, isActive } = req.body;
+        const { dayOfWeek, hour, minute, message, title, isActive } = req.body;
 
         const updatedMessage = await WeeklyMessage.findByIdAndUpdate(
             req.params.id,
@@ -288,6 +291,7 @@ router.put('/weekly/:id', async (req, res) => {
                 hour,
                 minute,
                 message,
+                title: title || '',
                 isActive,
                 updatedAt: Date.now()
             },
@@ -384,7 +388,7 @@ router.get('/daily/:id', async (req, res) => {
 // 생성
 router.post('/daily', async (req, res) => {
     try {
-        const { hour, minute, message, isActive } = req.body;
+        const { hour, minute, message, title, isActive } = req.body;
 
         // 필수 필드 검증
         if (hour === undefined || minute === undefined || !message) {
@@ -398,6 +402,7 @@ router.post('/daily', async (req, res) => {
             hour,
             minute,
             message,
+            title: title || '',
             isActive: isActive !== undefined ? isActive : true
         });
 
@@ -420,7 +425,7 @@ router.post('/daily', async (req, res) => {
 // 수정
 router.put('/daily/:id', async (req, res) => {
     try {
-        const { hour, minute, message, isActive } = req.body;
+        const { hour, minute, message, title, isActive } = req.body;
 
         const updatedMessage = await DailyMessage.findByIdAndUpdate(
             req.params.id,
@@ -428,6 +433,7 @@ router.put('/daily/:id', async (req, res) => {
                 hour,
                 minute,
                 message,
+                title: title || '',
                 isActive,
                 updatedAt: Date.now()
             },

@@ -31,6 +31,13 @@ const exactTimeMessageSchema = new mongoose.Schema({
         min: 0,
         max: 59
     },
+    // 관리자가 붙이는 이름. 봇이 로드 결과 목록에 적는다. 없으면 본문 첫 줄을 쓴다
+    title: {
+        type: String,
+        trim: true,
+        maxlength: 100,
+        default: ''
+    },
     message: {
         type: String,
         required: true,

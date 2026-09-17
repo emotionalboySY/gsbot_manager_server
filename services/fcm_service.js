@@ -1,18 +1,30 @@
 const admin = require('firebase-admin');
-const serviceAccount = require('../firebase-service-account.json');
 
-// Firebase Admin 초기화
-if (!admin.apps.length) {
-    admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
-    });
+// Firebase Admin 초기화 — 서비스 계정 파일은 운영 서버에만 있다(gitignore).
+// 로컬에는 없으므로 그때는 FCM 만 끄고 나머지 서버는 그대로 뜬다. 예전에는
+// 여기서 require 가 던져 로컬에서 서버를 아예 못 띄웠다.
+let messaging = null;
+try {
+    const serviceAccount = require('../firebase-service-account.json');
+    if (!admin.apps.length) {
+        admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount)
+        });
+    }
+    messaging = admin.messaging();
+} catch (error) {
+    if (error.code !== 'MODULE_NOT_FOUND') throw error;
+    console.warn('⚠️ firebase-service-account.json 이 없어 FCM 을 끕니다 (푸시 알림은 보내지 않음)');
 }
+
+const FCM_DISABLED = { success: false, error: 'FCM 미설정 (firebase-service-account.json 없음)' };
 
 class FCMService {
     /**
      * 단일 기기에 알림 전송
      */
     static async sendToDevice(token, title, body, data = {}) {
+        if (!messaging) return FCM_DISABLED;
         const message = {
             notification: {
                 title: title,
@@ -30,7 +42,7 @@ class FCMService {
         };
 
         try {
-            const response = await admin.messaging().send(message);
+            const response = await messaging.send(message);
             console.log('✅ 알림 전송 성공:', response);
             return { success: true, response };
         } catch (error) {
@@ -43,6 +55,7 @@ class FCMService {
      * 여러 기기에 알림 전송
      */
     static async sendToMultipleDevices(tokens, title, body, data = {}) {
+        if (!messaging) return FCM_DISABLED;
         if (!tokens || tokens.length === 0) {
             return { success: false, error: '토큰이 없습니다' };
         }
@@ -79,7 +92,7 @@ class FCMService {
         };
 
         try {
-            const response = await admin.messaging().sendEachForMulticast(message);
+            const response = await messaging.sendEachForMulticast(message);
             console.log(`✅ ${response.successCount}/${tokens.length}개 알림 전송 성공`);
 
             // 실패한 토큰 로그
@@ -119,8 +132,9 @@ class FCMService {
      * 토픽 구독
      */
     static async subscribeToTopic(tokens, topic) {
+        if (!messaging) return FCM_DISABLED;
         try {
-            const response = await admin.messaging().subscribeToTopic(tokens, topic);
+            const response = await messaging.subscribeToTopic(tokens, topic);
             console.log('✅ 토픽 구독 성공:', response);
             return { success: true, response };
         } catch (error) {
@@ -133,6 +147,7 @@ class FCMService {
      * 토픽에 알림 전송
      */
     static async sendToTopic(topic, title, body, data = {}) {
+        if (!messaging) return FCM_DISABLED;
         const message = {
             notification: {
                 title: title,
@@ -150,7 +165,7 @@ class FCMService {
         };
 
         try {
-            const response = await admin.messaging().send(message);
+            const response = await messaging.send(message);
             console.log('✅ 토픽 알림 전송 성공:', response);
             return { success: true, response };
         } catch (error) {

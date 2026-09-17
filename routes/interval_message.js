@@ -3,6 +3,15 @@ const router = express.Router();
 const ExactTimeMessage = require('../models/exact_time_message');
 const WeeklyMessage = require('../models/weekly_message');
 const DailyMessage = require('../models/daily_message');
+const {
+    applyDueChanges,
+    forBot,
+    addScheduledChange,
+    removeScheduledChange
+} = require('../services/scheduled_change');
+
+// 변경 예약을 둘 수 있는 종류. 정확한 시간 메시지는 한 번 나가고 끝이라 뺀다
+const SCHEDULABLE = { daily: DailyMessage, weekly: WeeklyMessage };
 
 // ============================================
 // 통합 조회 API (GraalJS에서 사용)
@@ -11,6 +20,10 @@ const DailyMessage = require('../models/daily_message');
 // 모든 활성 알림 조회 (정확한 시간 + 요일 시간)
 router.get('/all', async (req, res) => {
     try {
+        // 때가 된 변경 예약을 본문에 반영하고 나서 읽는다
+        await applyDueChanges(WeeklyMessage);
+        await applyDueChanges(DailyMessage);
+
         const exactTimeMessages = await ExactTimeMessage.find({ isActive: true })
             .select('-__v -createdAt -updatedAt -isActive')
             .lean();
@@ -23,8 +36,8 @@ router.get('/all', async (req, res) => {
             .select('-__v -createdAt -updatedAt -isActive')
             .lean();
 
-        // 세 배열을 합쳐서 반환
-        const allMessages = [...exactTimeMessages, ...weeklyMessages, ...dailyMessages];
+        // 세 배열을 합쳐서 반환. 매일·매주는 예약 본문 대신 changeAt 만 싣는다
+        const allMessages = [...exactTimeMessages, ...forBot(weeklyMessages), ...forBot(dailyMessages)];
 
         res.json(allMessages);
     } catch (error) {
@@ -191,6 +204,7 @@ router.delete('/exact/:id', async (req, res) => {
 // 전체 조회
 router.get('/weekly', async (req, res) => {
     try {
+        await applyDueChanges(WeeklyMessage);
         const messages = await WeeklyMessage.find().sort({ dayOfWeek: 1, hour: 1, minute: 1 });
         res.json({ success: true, data: messages });
     } catch (error) {
@@ -352,6 +366,7 @@ router.delete('/weekly/:id', async (req, res) => {
 // 전체 조회
 router.get('/daily', async (req, res) => {
     try {
+        await applyDueChanges(DailyMessage);
         const messages = await DailyMessage.find().sort({ hour: 1, minute: 1 });
         res.json({ success: true, data: messages });
     } catch (error) {
@@ -484,6 +499,49 @@ router.delete('/daily/:id', async (req, res) => {
             message: '알림 삭제 실패',
             error: error.message
         });
+    }
+});
+
+// ============================================
+// 변경 예약 (매일·매주)
+// ============================================
+
+function schedulableModel(req, res) {
+    const Model = SCHEDULABLE[req.params.type];
+    if (!Model) {
+        res.status(404).json({ success: false, message: '변경 예약을 둘 수 없는 종류입니다.' });
+        return null;
+    }
+    return Model;
+}
+
+// 예약 추가 — { at: ISO 시각, message }
+router.post('/:type/:id/schedule', async (req, res) => {
+    const Model = schedulableModel(req, res);
+    if (!Model) return;
+    try {
+        const result = await addScheduledChange(Model, req.params.id, req.body || {});
+        if (result.error) {
+            return res.status(result.status || 400).json({ success: false, message: result.error });
+        }
+        res.status(201).json({ success: true, message: '변경이 예약되었습니다.', data: result.doc });
+    } catch (error) {
+        res.status(400).json({ success: false, message: '변경 예약 실패', error: error.message });
+    }
+});
+
+// 예약 취소
+router.delete('/:type/:id/schedule/:changeId', async (req, res) => {
+    const Model = schedulableModel(req, res);
+    if (!Model) return;
+    try {
+        const result = await removeScheduledChange(Model, req.params.id, req.params.changeId);
+        if (result.error) {
+            return res.status(result.status || 400).json({ success: false, message: result.error });
+        }
+        res.json({ success: true, message: '예약이 취소되었습니다.', data: result.doc });
+    } catch (error) {
+        res.status(500).json({ success: false, message: '예약 취소 실패', error: error.message });
     }
 });
 

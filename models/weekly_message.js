@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const scheduledChangeSchema = require('./scheduled_change');
 
 const weeklyMessageSchema = new mongoose.Schema({
     dayOfWeek: {
@@ -35,6 +36,11 @@ const weeklyMessageSchema = new mongoose.Schema({
     isActive: {
         type: Boolean,
         default: true
+    },
+    // 변경 예약. at 순으로 적용되고 적용된 항목은 빠진다
+    scheduledChanges: {
+        type: [scheduledChangeSchema],
+        default: []
     },
     createdAt: {
         type: Date,

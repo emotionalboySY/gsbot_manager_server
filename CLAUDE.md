@@ -22,6 +22,10 @@ node index_test.js     # 테스트
 
 # 의존성 설치
 npm install
+
+# 강렬한 힘의 결정 가격 갱신 — 패치노트 표를 tools/update_crystal_prices.js 에 붙이고 돌린다
+node tools/update_crystal_prices.js            # 미리보기
+node tools/update_crystal_prices.js --apply    # 오늘(KST) 기준 적용
 ```
 
 별도의 빌드, 린트, 테스트 프레임워크는 설정되어 있지 않다.

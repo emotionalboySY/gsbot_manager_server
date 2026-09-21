@@ -16,7 +16,7 @@ const bossData = [
         defenseRate: 300,
         phases: [{ phaseNumber: 1, hp: 5000000000000 }],
         rewards: {
-          crystalPrice: 47800000,
+          crystalPrice: 12700000,
           items: ['녹옥의 보스 반지 상자(하급)'],
           specialItems: { yeomyeong: ['가디언 엔젤 링'] }
         }
@@ -26,7 +26,7 @@ const bossData = [
         defenseRate: 300,
         phases: [{ phaseNumber: 1, hp: 90000000000000 }],
         rewards: {
-          crystalPrice: 161000000,
+          crystalPrice: 71300000,
           solErda: 70,
           items: ['흑옥의 보스 반지 상자(상급)'],
           specialItems: { yeomyeong: ['가디언 엔젤 링'] }
@@ -49,7 +49,7 @@ const bossData = [
           { phaseNumber: 3, hp: 630000000000 }
         ],
         rewards: {
-          crystalPrice: 31400000,
+          crystalPrice: 8350000,
           items: ['특수형 에너지 코어(S급): 1~3개', '녹옥의 보스 반지 상자(하급)'],
           specialItems: {}
         }
@@ -63,7 +63,7 @@ const bossData = [
           { phaseNumber: 3, hp: 13500000000000 }
         ],
         rewards: {
-          crystalPrice: 119000000,
+          crystalPrice: 48900000,
           solErda: 50,
           items: ['특수형 에너지 코어(S급): 2~4개', '스우로이드', '홍옥의 보스 반지 상자(중급)'],
           specialItems: {
@@ -81,7 +81,7 @@ const bossData = [
           { phaseNumber: 3, hp: 720000000000000 }
         ],
         rewards: {
-          crystalPrice: 392000000,
+          crystalPrice: 545000000,
           solErda: 280,
           items: ['섬멸병기 스우로이드', '백옥의 보스 반지 상자(최상급)'],
           specialItems: {
@@ -105,7 +105,7 @@ const bossData = [
           { phaseNumber: 2, hp: 360000000000 }
         ],
         rewards: {
-          crystalPrice: 32900000,
+          crystalPrice: 8750000,
           items: ['뒤틀린 낙인의 영혼석: 1~3개', '루인 포스실드', '녹옥의 보스 반지 상자(하급)'],
           specialItems: {}
         }
@@ -118,7 +118,7 @@ const bossData = [
           { phaseNumber: 2, hp: 10800000000000 }
         ],
         rewards: {
-          crystalPrice: 113000000,
+          crystalPrice: 46400000,
           solErda: 50,
           items: ['뒤틀린 낙인의 영혼석: 2~4개', '데미안로이드', '루인 포스실드', '홍옥의 보스 반지 상자(중급)'],
           specialItems: {
@@ -144,7 +144,7 @@ const bossData = [
           { phaseNumber: 2, hp: 6000000000000 }
         ],
         rewards: {
-          crystalPrice: 49000000,
+          crystalPrice: 14900000,
           items: ['녹옥의 보스 반지 상자(하급)'],
           specialItems: {}
         }
@@ -158,7 +158,7 @@ const bossData = [
           { phaseNumber: 2, hp: 12000000000000 }
         ],
         rewards: {
-          crystalPrice: 58600000,
+          crystalPrice: 17800000,
           items: ['나비날개 물방울석: 1~2개', '녹옥의 보스 반지 상자(하급)'],
           specialItems: { yeomyeong: ['트와일라이트 마크'] }
         }
@@ -173,7 +173,7 @@ const bossData = [
           { phaseNumber: 3, hp: 12800000000000 }
         ],
         rewards: {
-          crystalPrice: 135000000,
+          crystalPrice: 59700000,
           solErda: 50,
           items: ['루시드로이드', '나비날개 물방울석: 2~3개', '홍옥의 보스 반지 상자(중급)'],
           specialItems: {
@@ -201,7 +201,7 @@ const bossData = [
           { phaseNumber: 3, hp: 7000000000000 }
         ],
         rewards: {
-          crystalPrice: 53100000,
+          crystalPrice: 16100000,
           items: ['녹옥의 보스 반지 상자(하급)'],
           specialItems: {}
         }
@@ -216,7 +216,7 @@ const bossData = [
           { phaseNumber: 3, hp: 10500000000000 }
         ],
         rewards: {
-          crystalPrice: 67600000,
+          crystalPrice: 20500000,
           items: ['코브웹 물방울석: 1~2개', '녹옥의 보스 반지 상자(하급)'],
           specialItems: { yeomyeong: ['트와일라이트 마크'] }
         }
@@ -231,7 +231,7 @@ const bossData = [
           { phaseNumber: 3, hp: 52500000000000 }
         ],
         rewards: {
-          crystalPrice: 165000000,
+          crystalPrice: 73200000,
           solErda: 50,
           items: ['거울 세계의 코어 젬스톤: 1개', '코브웹 물방울석: 2~3개', '홍옥의 보스 반지 상자(중급)'],
           specialItems: {
@@ -255,7 +255,7 @@ const bossData = [
         arcaneForce: 730,
         phases: [{ phaseNumber: 1, hp: 25500000000000 }],
         rewards: {
-          crystalPrice: 72400000,
+          crystalPrice: 22000000,
           items: ['염원의 불꽃: 14개', '녹옥의 보스 반지 상자(하급)'],
           specialItems: { yeomyeong: ['에스텔라 이어링'] }
         }
@@ -266,7 +266,7 @@ const bossData = [
         arcaneForce: 730,
         phases: [{ phaseNumber: 1, hp: 127500000000000 }],
         rewards: {
-          crystalPrice: 150000000,
+          crystalPrice: 66300000,
           solErda: 100,
           items: ['염원의 불꽃: 14개', '흑옥의 보스 반지 상자(상급)'],
           specialItems: {
@@ -290,7 +290,7 @@ const bossData = [
         arcaneForce: 850,
         phases: [{ phaseNumber: 1, hp: 26000000000000 }],
         rewards: {
-          crystalPrice: 78100000,
+          crystalPrice: 23700000,
           items: ['염원의 불꽃: 16개', '녹옥의 보스 반지 상자(하급)'],
           specialItems: { yeomyeong: ['에스텔라 이어링'] }
         }
@@ -301,7 +301,7 @@ const bossData = [
         arcaneForce: 850,
         phases: [{ phaseNumber: 1, hp: 157500000000000 }],
         rewards: {
-          crystalPrice: 177000000,
+          crystalPrice: 89600000,
           solErda: 120,
           items: ['염원의 불꽃: 14개', '흑옥의 보스 반지 상자(상급)'],
           specialItems: {
@@ -330,7 +330,7 @@ const bossData = [
           { phaseNumber: 4, hp: 22000000000000 }
         ],
         rewards: {
-          crystalPrice: 153000000,
+          crystalPrice: 67600000,
           solErda: 70,
           items: ['홍옥의 보스 반지 상자(중급)'],
           specialItems: {
@@ -350,7 +350,7 @@ const bossData = [
           { phaseNumber: 4, hp: 44000000000000 }
         ],
         rewards: {
-          crystalPrice: 200000000,
+          crystalPrice: 100000000,
           solErda: 120,
           items: ['어두운 힘의 기운: 3개', '흑옥의 보스 반지 상자(상급)'],
           specialItems: {
@@ -376,7 +376,7 @@ const bossData = [
           { phaseNumber: 2, hp: 155400000000000, authenticForce: 200 }
         ],
         rewards: {
-          crystalPrice: 295000000,
+          crystalPrice: 167000000,
           solErda: 150,
           items: ['미트라의 코어 젬스톤', '흑옥의 보스 반지 상자(상급)'],
           specialItems: { yeomyeong: ['데이브레이크 펜던트'] }
@@ -390,7 +390,7 @@ const bossData = [
           { phaseNumber: 2, hp: 357000000000000, authenticForce: 200 }
         ],
         rewards: {
-          crystalPrice: 440000000,
+          crystalPrice: 302000000,
           solErda: 220,
           items: ['미트라의 코어 젬스톤', '백옥의 보스 반지 상자(최상급)'],
           specialItems: {
@@ -407,7 +407,7 @@ const bossData = [
           { phaseNumber: 2, hp: 5160000000000000, monsterLevel: 280, authenticForce: 200 }
         ],
         rewards: {
-          crystalPrice: 2420000000,
+          crystalPrice: 1840000000,
           solErda: 560,
           items: ['미트라의 코어 젬스톤', '백옥의 보스 반지 상자(최상급)'],
           specialItems: {
@@ -436,7 +436,7 @@ const bossData = [
           { phaseNumber: 4, hp: 136500000000000, shield: 3000000000000, monsterLevel: 275 }
         ],
         rewards: {
-          crystalPrice: 1000000000,
+          crystalPrice: 665000000,
           solErda: 300,
           items: ['(해방) 어둠의 흔적: 600', '백옥의 보스 반지 상자(최상급)'],
           specialItems: { chilheuk: ['창세의 뱃지'] }
@@ -453,7 +453,7 @@ const bossData = [
           { phaseNumber: 4, hp: 1155000000000000, shield: 52000000000000, monsterLevel: 280 }
         ],
         rewards: {
-          crystalPrice: 9200000000,
+          crystalPrice: 8740000000,
           solErda: 600,
           items: ['(해방) 어둠의 흔적: 600', '백옥의 보스 반지 상자(최상급)'],
           specialItems: {
@@ -479,7 +479,7 @@ const bossData = [
           { phaseNumber: 2, hp: 262500000000000 }
         ],
         rewards: {
-          crystalPrice: 345000000,
+          crystalPrice: 238000000,
           solErda: 200,
           items: ['백옥의 보스 반지 상자(최상급)'],
           specialItems: {}
@@ -494,7 +494,7 @@ const bossData = [
           { phaseNumber: 2, hp: 720000000000000, monsterLevel: 280 }
         ],
         rewards: {
-          crystalPrice: 510000000,
+          crystalPrice: 479000000,
           solErda: 250,
           items: ['니키로이드', '백옥의 보스 반지 상자(최상급)', '생명의 연마석'],
           specialItems: {
@@ -511,7 +511,7 @@ const bossData = [
           { phaseNumber: 2, hp: 4016000000000000 }
         ],
         rewards: {
-          crystalPrice: 1120000000,
+          crystalPrice: 1230000000,
           solErda: 400,
           items: ['니키로이드', '생명의 보스 반지 상자', '생명의 연마석'],
           specialItems: {
@@ -528,7 +528,7 @@ const bossData = [
           { phaseNumber: 2, hp: 15498000000000000 }
         ],
         rewards: {
-          crystalPrice: 2700000000,
+          crystalPrice: 4104000000,
           solErda: 700,
           items: ['니키로이드', '생명의 보스 반지 상자', '생명의 연마석'],
           specialItems: {
@@ -555,7 +555,7 @@ const bossData = [
           { phaseNumber: 3, hp: 528000000000000, description: '궁기, 도올, 혼돈: 각 126조\n  . 카링: 150조' }
         ],
         rewards: {
-          crystalPrice: 381000000,
+          crystalPrice: 320000000,
           solErda: 200,
           items: ['백옥의 보스 반지 상자(최상급)'],
           specialItems: {
@@ -573,7 +573,7 @@ const bossData = [
           { phaseNumber: 3, hp: 2258000000000000, description: '궁기, 도올, 혼돈: 각 512조\n  . 카링: 722조' }
         ],
         rewards: {
-          crystalPrice: 595000000,
+          crystalPrice: 593000000,
           solErda: 300,
           items: ['카링로이드', '백옥의 보스 반지 상자(최상급)', '생명의 연마석'],
           specialItems: {
@@ -592,7 +592,7 @@ const bossData = [
           { phaseNumber: 3, hp: 7927000000000000, description: '궁기, 도올, 혼돈: 각 1,827조\n  . 카링: 2,446조' }
         ],
         rewards: {
-          crystalPrice: 1310000000,
+          crystalPrice: 1560000000,
           solErda: 500,
           items: ['카링로이드', '생명의 보스 반지 상자', '신념의 연마석'],
           specialItems: {
@@ -611,7 +611,7 @@ const bossData = [
           { phaseNumber: 3, hp: 29452000000000000, description: '궁기, 도올, 혼돈: 각 6,930조\n  . 카링: 8,662조' }
         ],
         rewards: {
-          crystalPrice: 3150000000,
+          crystalPrice: 5387000000,
           solErda: 800,
           items: ['카링로이드', '생명의 보스 반지 상자', '신념의 연마석'],
           specialItems: {
@@ -639,7 +639,7 @@ const bossData = [
           { phaseNumber: 3, hp: 2592000000000000, description: '진리에 도달한 림보 - 흑+백: 합 2,592조' }
         ],
         rewards: {
-          crystalPrice: 900000000,
+          crystalPrice: 995000000,
           solErda: 400,
           items: ['림보로이드', '생명의 보스 반지 상자', '신념의 연마석'],
           specialItems: {
@@ -658,7 +658,7 @@ const bossData = [
           { phaseNumber: 3, hp: 4884000000000000, description: '진리에 도달한 림보 - 흑+백: 합 4,884조' }
         ],
         rewards: {
-          crystalPrice: 1930000000,
+          crystalPrice: 2385000000,
           solErda: 550,
           items: ['림보로이드', '생명의 보스 반지 상자', '신념의 연마석'],
           specialItems: {
@@ -686,7 +686,7 @@ const bossData = [
           { phaseNumber: 3, hp: 4145000000000000 }
         ],
         rewards: {
-          crystalPrice: 1200000000,
+          crystalPrice: 1320000000,
           solErda: 450,
           items: ['발드릭스로이드', '생명의 보스 반지 상자', '신념의 연마석'],
           specialItems: {
@@ -705,7 +705,7 @@ const bossData = [
           { phaseNumber: 3, hp: 9309000000000000 }
         ],
         rewards: {
-          crystalPrice: 2160000000,
+          crystalPrice: 3078000000,
           solErda: 650,
           items: ['발드릭스로이드', '생명의 보스 반지 상자', '신념의 연마석'],
           specialItems: {
@@ -732,7 +732,7 @@ const bossData = [
           { phaseNumber: 3, hp: 228000000000000 }
         ],
         rewards: {
-          crystalPrice: 361000000,
+          crystalPrice: 261000000,
           solErda: 200,
           items: ['백옥의 보스 반지 상자(최상급)'],
           specialItems: {}
@@ -747,7 +747,7 @@ const bossData = [
           { phaseNumber: 3, hp: 660000000000000 }
         ],
         rewards: {
-          crystalPrice: 530000000,
+          crystalPrice: 532000000,
           solErda: 280,
           items: ['대적자로이드', '백옥의 보스 반지 상자(최상급)', '생명의 연마석'],
           specialItems: {
@@ -764,7 +764,7 @@ const bossData = [
           { phaseNumber: 3, hp: 4180000000000000 }
         ],
         rewards: {
-          crystalPrice: 1260000000,
+          crystalPrice: 1390000000,
           solErda: 450,
           items: ['대적자로이드', '생명의 보스 반지 상자', '생명의 연마석'],
           specialItems: {
@@ -782,7 +782,7 @@ const bossData = [
           { phaseNumber: 3, hp: 12870000000000000 }
         ],
         rewards: {
-          crystalPrice: 2920000000,
+          crystalPrice: 4712000000,
           solErda: 750,
           items: ['대적자로이드', '생명의 보스 반지 상자', '생명의 연마석'],
           specialItems: {

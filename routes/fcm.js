@@ -17,10 +17,18 @@ router.post('/register', async (req, res) => {
 
         console.log('📱 FCM 토큰 등록 요청:', token.substring(0, 20) + '...');
 
-        if (device_info && device_info.platform) {
+        // 같은 플랫폼의 예전 토큰을 지운다 — 앱을 다시 깔면 토큰이 바뀌는데 옛 토큰이
+        // 남으면 send-all 이 죽은 토큰에도 보낸다. 웹(메이플링 백오피스 브라우저)은
+        // 집·회사처럼 여러 대에서 받으므로 지우지 않고, 로그아웃 때 /unregister 로 뺀다.
+        //
+        // 2026-11-02 까지는 필드 경로('device_info_platform')와 값(plahform)이 둘 다
+        // 틀려 조건이 { token: { $ne: token } } 만 남았다 — 등록할 때마다 다른 토큰을
+        // 전부 지웠다. 받는 기기가 앱 하나뿐이라 드러나지 않았다.
+        const platform = device_info && device_info.platform;
+        if (platform && platform !== 'web') {
             const deleteResult = await FCMToken.deleteMany({
                 token: { $ne: token },
-                'device_info_platform': device_info.plahform
+                'device_info.platform': platform
             });
 
             if (deleteResult.deletedCount > 0) {

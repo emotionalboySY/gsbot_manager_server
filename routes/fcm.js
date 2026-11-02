@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const FCMToken = require('../models/fcm_token');
 const FCMService = require('../services/fcm_service');
@@ -189,6 +190,30 @@ router.get('/tokens', async (req, res) => {
     } catch (error) {
         console.error('❌ 토큰 조회 실패:', error);
         res.status(500).json({ error: '토큰 조회 실패' });
+    }
+});
+
+/**
+ * 토큰 삭제 (id) — 메이플링 백오피스의 알림 기기 목록에서 다른 기기를 끌 때.
+ * 목록은 토큰을 앞부분만 보여 주므로 id 로 지운다.
+ * DELETE /api/fcm/tokens/:id
+ */
+router.delete('/tokens/:id', async (req, res) => {
+    try {
+        if (!mongoose.isValidObjectId(req.params.id)) {
+            return res.status(400).json({ error: '잘못된 토큰 id 입니다' });
+        }
+
+        const deleted = await FCMToken.findByIdAndDelete(req.params.id);
+        if (!deleted) {
+            return res.status(404).json({ error: '토큰을 찾을 수 없습니다' });
+        }
+
+        console.log('🗑️ 토큰 삭제(id):', deleted.token.substring(0, 20) + '...');
+        res.json({ success: true });
+    } catch (error) {
+        console.error('❌ 토큰 삭제 실패:', error);
+        res.status(500).json({ error: '토큰 삭제 실패', details: error.message });
     }
 });
 

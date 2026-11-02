@@ -58,6 +58,30 @@ router.post('/register', async (req, res) => {
 });
 
 /**
+ * FCM 토큰 해제 — 메이플링 백오피스가 알림을 끄거나 로그아웃할 때
+ * POST /api/fcm/unregister
+ */
+router.post('/unregister', async (req, res) => {
+    try {
+        const { token } = req.body;
+
+        if (!token) {
+            return res.status(400).json({ error: '토큰이 필요합니다' });
+        }
+
+        const result = await FCMToken.deleteOne({ token });
+        console.log(result.deletedCount > 0
+            ? '🗑️ 토큰 해제: ' + token.substring(0, 20) + '...'
+            : 'ℹ️ 해제할 토큰 없음: ' + token.substring(0, 20) + '...');
+
+        res.json({ success: true, deleted: result.deletedCount });
+    } catch (error) {
+        console.error('❌ 토큰 해제 실패:', error);
+        res.status(500).json({ error: '토큰 해제 실패', details: error.message });
+    }
+});
+
+/**
  * 테스트 알림 전송 (단일 토큰)
  * POST /api/fcm/test
  */

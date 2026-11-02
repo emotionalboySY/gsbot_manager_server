@@ -24,5 +24,12 @@ const PORT = process.env.HARNESS_PORT || 3001;
     app.use('/api/boss-template', require('../routes/boss_template.js'));
     app.use('/api/intervalMessage', require('../routes/interval_message.js'));
     app.use('/api/web', require('../routes/web/index.js'));
+    // 백오피스 봇 알림. FCM 은 서비스 계정 파일이 있을 때만 — 없으면 require 에서 던진다
+    try {
+        app.use('/api/fcm', require('../routes/fcm.js'));
+    } catch (error) {
+        if (error.code !== 'MODULE_NOT_FOUND') throw error;
+        console.warn('firebase-service-account.json 이 없어 /api/fcm 은 뺀다');
+    }
     app.listen(PORT, () => console.log(`admin harness on ${PORT}`));
 })();

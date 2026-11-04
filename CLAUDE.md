@@ -88,8 +88,17 @@ node tools/update_crystal_prices.js --apply    # 오늘(KST) 기준 적용
 - API 서비스 시작일: 2023-12-21
 
 ### 환경변수
-`.env`에서 관리. 코드가 실제로 읽는 값은 `MONGO_URI`, `API_KEY`, `PORT` 세 개다
+`.env`에서 관리. 코드가 실제로 읽는 값은 `MONGO_URI`, `API_KEY`, `PORT`, `BOT_API_TOKEN`, `BOT_AUTH_MODE` 다
 (`DISCORD_TOKEN`·`DB_HOST` 같은 키는 예전 템플릿의 잔재로 아무 데서도 안 쓴다).
+
+### 인증
+`utils/bot_auth.js`. 쓰기 전부와 `/api/fcm`·`/api/administrator`·`/api/intervalMessage` 조회는
+`X-Bot-Token` 헤더가 있어야 한다. 나머지 GET 은 연다. 봇의 일반 명령이 쓰는 `Http.request` 는
+헤더를 실을 수 없다. 새 라우터의 조회에 토큰이 필요하면 `routes/index.js` 마운트에 `requireToken` 을 건다.
+
+```bash
+node tools/check_bot_auth.js   # 실제 라우터로 토큰 검사 확인
+```
 
 ### 로컬 개발
 ```bash

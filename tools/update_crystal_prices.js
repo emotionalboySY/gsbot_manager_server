@@ -5,7 +5,7 @@
  *   node tools/update_crystal_prices.js --apply              # 오늘(KST) 기준으로 적용된 조정까지 반영
  *   node tools/update_crystal_prices.js --apply --as-of 2026-10-01   # 그 날짜 기준
  *
- * .env 의 MONGO_URI 를 쓴다(seed_bosses.js 와 같다). 운영은 EC2 에서 돌린다.
+ * .env 의 MONGO_URI 를 쓴다(admin_harness.js 와 같다). 운영은 EC2 에서 돌린다.
  *
  * ── 왜 스크립트인가 ──────────────────────────────────────────────
  * 가격은 봇 DB(bosses.difficulties.<난이도>.rewards.crystalPrice)가 원본이고 메이플링

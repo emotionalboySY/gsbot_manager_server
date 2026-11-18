@@ -17,7 +17,7 @@
   },
   "scripts": {
     "start": "node index.js",
-    "seed": "node seed_bosses.js",
+    "seed": "node tools/seed_local_bosses.js",
     "verify:enforce": "node verify_enforcements.js"
   }
 }

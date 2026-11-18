@@ -7,7 +7,8 @@
  * 로컬에서 통째로 못 돌린다. 보스·메시지 템플릿·정기 메시지·웹 전송단만 필요한
  * 메이플링 개발에는 이걸로 충분하다. 메이플링 .env.local 에
  * BOT_API_URL=http://localhost:3001/api 와 MAPLE_API_URL=http://localhost:3001/api/web 을
- * 잡으면 된다. 보스가 비어 있으면 먼저 `npm run seed`.
+ * 잡으면 된다. 보스가 비어 있으면 먼저 `npm run seed` — 운영 공개 API 의 보스를 받아
+ * 로컬 Mongo 에만 넣는다(tools/seed_local_bosses.js).
  */
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env'), quiet: true });

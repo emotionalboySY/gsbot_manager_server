@@ -104,9 +104,16 @@ node tools/check_bot_auth.js   # 실제 라우터로 토큰 검사 확인
 ```bash
 brew services start mongodb-community    # 로컬 MongoDB
 cp .env.example .env                     # MONGO_URI·API_KEY 채우기
-npm install && npm run seed              # 보스 데이터 적재
+npm install && npm run seed              # 보스 데이터 적재 (운영 공개 API → 로컬 Mongo)
 npm start                                # 기본 3000, PORT 로 변경 가능
 ```
+
+보스 데이터의 원본은 운영 Mongo 이고 메이플링 백오피스가 고친다. 저장소에 보스 표를
+두지 않는다. `npm run seed`(`tools/seed_local_bosses.js`)는 운영 공개 API
+`https://maple-api.emotionbsy.com/boss` 를 받아 `models/boss.js` 모양으로 바꿔 로컬 DB 의
+`bosses` 에 넣는다. `MONGO_URI` 호스트가 localhost·127.0.0.1·::1 이 아니면 거부하고,
+`bosses` 가 비어 있지 않으면 `npm run seed -- --replace` 여야 지우고 다시 넣는다.
+`npm run seed -- --dry-run` 은 DB 에 붙지 않고 받은 목록만 보여 준다.
 
 `MONGO_URI` 가 없으면 서버는 뜨지만 DB 의존 기능이 전부 실패한다
 (`/본캐` · `/건의` · `/레벨히스토리` · `/보스`). 운영과 다른 DB 이름
